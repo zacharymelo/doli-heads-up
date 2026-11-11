@@ -40,6 +40,9 @@ Menu **Heads-up → My queue**, or the flag icon in the top bar. Its bubble show
 - **For me**: open flags, problem reports and assignments, with who sent each one, the record, a link back to the exact page, and its **Status** (to do, acknowledged, in progress, done).
 - **Assigned to me**, read straight from the records, so leads that arrived without an assignment event (email collectors, imports) still show: open leads and projects I'm on (with lead status and last activity), my open tasks, open proposals and orders I follow, third parties I'm the sales rep for.
 - **Sent by me**, and **Everyone's open flags** (needs the "See everyone's flags" permission).
+- **Completed**: every to-do assigned to me that is done, most recently finished first, with when and by whom, a page at a time. Its slider or picker reopens one.
+
+These are tabs at the top of the page and entries in the left menu (the Completed menu entry appears after the module is turned off and on again).
 
 ## To do, acknowledged, in progress, done
 
@@ -63,7 +66,8 @@ When a new flag, problem report or assignment reaches you, the browser shows a n
 - **Say what Alt+click on your page is about:** put `data-headsup-*` attributes on the element or any parent; each is taken from the nearest element that has it. `element`, `id`, `label`: the record (`myobject@mymodule`), which then wins over links found nearby. `page`: a link back to exactly that spot, a path inside Dolibarr. `title`, `quote`: the title and description to start from. `users`: user ids offered as quick choices, comma separated. Meta Inbox (metamessenger) tags every message this way, so Alt+clicking one pings someone with a link that opens the conversation at that message.
 - **Hear when a flag is saved:** Heads-up fires `headsup:sent` on `document`, with `detail.id` (the event) and `detail.record`.
 - **Open the popup already filled in:** `window.HeadsupOpen({x, y, record: {element, id, label}, page, box, title, description, users, onSent})`. Every field is optional; `users` replaces the short list as quick choices, and `onSent(reply)` runs once it is saved. The attributes above take the same fields.
-- **Check a flag before it is saved:** hook `headsupBeforeFlag`, context `headsupflag`. `$object` is the record, `$parameters['userids']` the people chosen. Put `warnings` (strings) in `results` to make the sender confirm first, or `recordonly` to link the record without its third party, contact or project.
+- **Check a flag before it is saved:** hook `headsupBeforeFlag`, context `headsupflag`. `$object` is the record, `$parameters['userids']` the people chosen, `$parameters['project']` the sender's project choice (a project id, -1 for none, 0 automatic). Put `warnings` (strings) in `results` to make the sender confirm first, or `recordonly` to link the record without its third party, contact or project.
+- **Say which project a to-do belongs to:** hook `headsupTodoProject`, context `headsuptodo`. It runs for every new to-do (flags, problem reports and assignments) unless the sender chose a project in the popup. `$object` is the record, `$parameters` holds `code`, `userids`, `secondary` (the other record, or null) and `project` (the project Heads-up found on the record, or 0). Put `project` in `results`: a project id, or -1 for none. Leave it out to keep the automatic one. It is applied after `recordonly`, so a project you pass is kept. From the page side, `data-headsup-project` or `HeadsupOpen({project: {id, label}})` passes one too; it must be a project the sender can see.
 
 ## Permissions
 
@@ -72,7 +76,7 @@ When a new flag, problem report or assignment reaches you, the browser shows a n
 
 ## Setup
 
-Home → Setup → Modules → Heads-up: to-do on assignment (on/off), who receives problem reports, show every user in the popup (on/off), short list, status control (slider, status picker or both, on My queue and the event card; default both), top bar refresh interval, debug mode (`/custom/headsup/ajax/debug.php`).
+Home → Setup → Modules → Heads-up: to-do on assignment (on/off), who receives problem reports, show every user in the popup (on/off), short list, status control (slider, status picker or both, on My queue and the event card; default both), project field in the popup (off by default: Automatic, No project, or one of the open projects the sender can see), top bar refresh interval, debug mode (`/custom/headsup/ajax/debug.php`).
 
 ## Not in this version
 

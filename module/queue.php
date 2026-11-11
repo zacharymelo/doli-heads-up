@@ -24,10 +24,12 @@ if (!$res) {
 	die("Include of main fails");
 }
 /**
+ * @var Conf $conf
  * @var DoliDB $db
  * @var Translate $langs
  * @var User $user
  */
+'@phan-var-force Conf $conf';
 '@phan-var-force DoliDB $db';
 '@phan-var-force Translate $langs';
 '@phan-var-force User $user';
@@ -46,13 +48,22 @@ if (!isModEnabled('headsup')) {
 }
 
 $view = GETPOST('view', 'aZ09');
-if (!in_array($view, array('me', 'sent', 'all'), true)) {
+if (!in_array($view, array('me', 'sent', 'done', 'all'), true)) {
 	$view = 'me';
 }
 if ($view === 'all' && !$user->hasRight('headsup', 'readall')) {
 	accessforbidden();
 }
 $showdone = GETPOSTINT('showdone');
+
+// Completed: every finished to-do, a page at a time
+$limit = GETPOSTINT('limit') ? GETPOSTINT('limit') : (int) $conf->liste_limit;
+$page = GETPOSTISSET('pageplusone') ? (GETPOSTINT('pageplusone') - 1) : GETPOSTINT('page');
+if ($page < 0) {
+	$page = 0;
+}
+$offset = $limit * $page;
+$nbtotalofrecords = 0;
 
 $now = dol_now();
 $hu = new Headsup($db);
@@ -118,31 +129,60 @@ function headsup_record_link($db, $row)
 // Heads-up to-dos
 // ---------------------------------------------------------------------------
 
-$sql = "SELECT DISTINCT a.id, a.code, a.label, a.note, a.datep, a.percent, a.fk_user_author,";
-$sql .= " a.fk_soc, a.fk_project, a.elementtype, a.fk_element,";
-$sql .= " ua.firstname as a_firstname, ua.lastname as a_lastname, ua.login as a_login";
-$sql .= " FROM ".MAIN_DB_PREFIX."actioncomm as a";
-$sql .= " LEFT JOIN ".MAIN_DB_PREFIX."user as ua ON ua.rowid = a.fk_user_author";
-if ($view === 'me') {
-	$sql .= " INNER JOIN ".MAIN_DB_PREFIX."actioncomm_resources as r ON r.fk_actioncomm = a.id AND r.element_type = 'user' AND r.fk_element = ".((int) $user->id);
+$sqlfrom = " FROM ".MAIN_DB_PREFIX."actioncomm as a";
+$sqlfrom .= " LEFT JOIN ".MAIN_DB_PREFIX."user as ua ON ua.rowid = a.fk_user_author";
+$sqlfrom .= " LEFT JOIN ".MAIN_DB_PREFIX."user as um ON um.rowid = a.fk_user_mod";
+if ($view === 'me' || $view === 'done') {
+	$sqlfrom .= " INNER JOIN ".MAIN_DB_PREFIX."actioncomm_resources as r ON r.fk_actioncomm = a.id AND r.element_type = 'user' AND r.fk_element = ".((int) $user->id);
 }
-$sql .= " WHERE a.code IN (".Headsup::codesSql().")";
-$sql .= " AND a.entity IN (".getEntity('agenda').")";
+$sqlfrom .= " WHERE a.code IN (".Headsup::codesSql().")";
+$sqlfrom .= " AND a.entity IN (".getEntity('agenda').")";
 if ($view === 'sent') {
-	$sql .= " AND a.fk_user_author = ".((int) $user->id);
+	$sqlfrom .= " AND a.fk_user_author = ".((int) $user->id);
 }
-if ($showdone) {
-	$sql .= " AND (a.percent < 100 OR a.tms >= '".$db->idate($now - 30 * 86400)."')";
+if ($view === 'done') {
+	$sqlfrom .= " AND (a.percent >= 100 OR a.percent < 0)";
+} elseif ($showdone) {
+	$sqlfrom .= " AND (a.percent < 100 OR a.tms >= '".$db->idate($now - 30 * 86400)."')";
 } else {
-	$sql .= " AND a.percent >= 0 AND a.percent < 100";
+	$sqlfrom .= " AND a.percent >= 0 AND a.percent < 100";
 }
-$sql .= " ORDER BY a.percent >= 100, a.datep DESC";
-$sql .= " LIMIT 500";
+
+if ($view === 'done') {
+	$resql = $db->query("SELECT COUNT(DISTINCT a.id) as nb".$sqlfrom);
+	if ($resql && ($obj = $db->fetch_object($resql))) {
+		$nbtotalofrecords = (int) $obj->nb;
+	}
+	if ($offset > $nbtotalofrecords) {
+		$page = 0;
+		$offset = 0;
+	}
+}
+
+$sql = "SELECT DISTINCT a.id, a.code, a.label, a.note, a.datep, a.tms, a.percent, a.fk_user_author,";
+$sql .= " a.fk_soc, a.fk_project, a.elementtype, a.fk_element,";
+$sql .= " ua.firstname as a_firstname, ua.lastname as a_lastname, ua.login as a_login,";
+$sql .= " um.firstname as m_firstname, um.lastname as m_lastname, um.login as m_login";
+$sql .= $sqlfrom;
+if ($view === 'done') {
+	// Most recently finished first (the event's last change)
+	$sql .= " ORDER BY a.tms DESC, a.id DESC";
+	$sql .= $db->plimit($limit + 1, $offset);
+} else {
+	$sql .= " ORDER BY a.percent >= 100, a.datep DESC";
+	$sql .= " LIMIT 500";
+}
 
 $events = array();
+$num = 0;
 $resql = $db->query($sql);
 if ($resql) {
 	while ($obj = $db->fetch_object($resql)) {
+		$num++;
+		// Completed: the extra row only tells the page bar there is a next page
+		if ($view === 'done' && $num > $limit) {
+			break;
+		}
 		$events[(int) $obj->id] = $obj;
 	}
 } else {
@@ -169,28 +209,47 @@ if ($events && $view !== 'me') {
 // View
 // ---------------------------------------------------------------------------
 
-$titles = array('me' => 'HeadsupForMe', 'sent' => 'HeadsupSentTitle', 'all' => 'HeadsupAllTitle');
+$titles = array('me' => 'HeadsupForMe', 'sent' => 'HeadsupSentTitle', 'done' => 'HeadsupCompletedTitle', 'all' => 'HeadsupAllTitle');
 llxHeader('', $langs->trans('HeadsupMyQueue'), '', '', 0, 0, '', '', '', 'mod-headsup page-queue');
 
-$toggleurl = $_SERVER['PHP_SELF'].'?view='.$view.($showdone ? '' : '&showdone=1');
-$morehtml = '<a class="butAction" href="'.dol_escape_htmltag($toggleurl).'">'.$langs->trans($showdone ? 'HeadsupHideDone' : 'HeadsupShowDone').'</a>';
-print load_fiche_titre($langs->trans($titles[$view]).' <span class="opacitymedium">('.count(array_filter($events, function ($e) {
-	return $e->percent < 100;
-})).')</span>', $morehtml, 'fa-flag');
+// Tabs: open for me, sent by me, my completed ones, everyone's
+$head = array();
+$head[] = array($_SERVER['PHP_SELF'].'?view=me', $langs->trans('HeadsupMyQueue'), 'me');
+$head[] = array($_SERVER['PHP_SELF'].'?view=sent', $langs->trans('HeadsupSent'), 'sent');
+$head[] = array($_SERVER['PHP_SELF'].'?view=done', $langs->trans('HeadsupCompleted'), 'done');
+if ($user->hasRight('headsup', 'readall')) {
+	$head[] = array($_SERVER['PHP_SELF'].'?view=all', $langs->trans('HeadsupAllOpen'), 'all');
+}
+print dol_get_fiche_head($head, $view, '', 1);
+
+if ($view === 'done') {
+	// The page size picker submits the form around it
+	$param = '&view=done'.($limit != (int) $conf->liste_limit ? '&limit='.((int) $limit) : '');
+	print '<form method="GET" action="'.dolPrintHTMLForAttribute($_SERVER['PHP_SELF']).'">';
+	print '<input type="hidden" name="view" value="done">';
+	print_barre_liste($langs->trans($titles[$view]), $page, $_SERVER['PHP_SELF'], $param, '', '', '', $num, $nbtotalofrecords, 'fa-check', 0, '', '', $limit, 0, 0, 1);
+	print '</form>';
+} else {
+	$toggleurl = $_SERVER['PHP_SELF'].'?view='.$view.($showdone ? '' : '&showdone=1');
+	$morehtml = '<a class="butAction" href="'.dol_escape_htmltag($toggleurl).'">'.$langs->trans($showdone ? 'HeadsupHideDone' : 'HeadsupShowDone').'</a>';
+	print load_fiche_titre($langs->trans($titles[$view]).' <span class="opacitymedium">('.count(array_filter($events, function ($e) {
+		return $e->percent < 100;
+	})).')</span>', $morehtml, 'fa-flag');
+}
 
 print '<div class="div-table-responsive-no-min">';
-print '<table class="noborder centpercent" id="headsup-events">';
+print '<table class="noborder centpercent'.($view === 'done' ? ' headsup-completed' : '').'" id="headsup-events">';
 print '<tr class="liste_titre">';
 print '<th>'.$langs->trans('HeadsupType').'</th>';
 print '<th>'.$langs->trans('HeadsupWhat').'</th>';
 print '<th>'.$langs->trans('HeadsupRecord').'</th>';
-print '<th>'.$langs->trans($view === 'me' ? 'HeadsupFrom' : 'HeadsupTo').'</th>';
-print '<th class="right">'.$langs->trans('HeadsupAge').'</th>';
+print '<th>'.$langs->trans(($view === 'me' || $view === 'done') ? 'HeadsupFrom' : 'HeadsupTo').'</th>';
+print '<th class="right">'.$langs->trans($view === 'done' ? 'HeadsupFinished' : 'HeadsupAge').'</th>';
 print '<th class="right"></th>';
 print '</tr>';
 
 if (!$events) {
-	print '<tr class="oddeven"><td colspan="6"><span class="opacitymedium">'.$langs->trans('HeadsupNothingOpen').'</span></td></tr>';
+	print '<tr class="oddeven"><td colspan="6"><span class="opacitymedium">'.$langs->trans($view === 'done' ? 'HeadsupNothingDone' : 'HeadsupNothingOpen').'</span></td></tr>';
 }
 
 $typelabels = array(
@@ -230,19 +289,34 @@ foreach ($events as $ev) {
 
 	print '<td class="tdoverflowmax200 headsup-col-record">'.headsup_record_link($db, $ev).'</td>';
 
-	if ($view === 'me') {
+	if ($view === 'me' || $view === 'done') {
 		$from = trim($ev->a_firstname.' '.$ev->a_lastname);
 		print '<td class="tdoverflowmax150 headsup-col-who" data-label="'.dolPrintHTMLForAttribute($langs->transnoentitiesnoconv('HeadsupFrom')).'">'.dol_escape_htmltag($from !== '' ? $from : (string) $ev->a_login).'</td>';
 	} else {
 		print '<td class="tdoverflowmax200 headsup-col-who" data-label="'.dolPrintHTMLForAttribute($langs->transnoentitiesnoconv('HeadsupTo')).'">'.dol_escape_htmltag(implode(', ', isset($assignees[$ev->id]) ? $assignees[$ev->id] : array())).'</td>';
 	}
 
-	print '<td class="right nowrap headsup-col-age" title="'.dol_escape_htmltag(dol_print_date($datep, 'dayhour')).'">'.headsup_age($datep).'</td>';
+	if ($view === 'done') {
+		// When it was finished (its last change) and by whom
+		$finished = $db->jdate($ev->tms);
+		$by = trim($ev->m_firstname.' '.$ev->m_lastname);
+		if ($by === '') {
+			$by = (string) $ev->m_login;
+		}
+		print '<td class="right headsup-col-age" data-label="'.dolPrintHTMLForAttribute($langs->transnoentitiesnoconv('HeadsupFinished')).'" title="'.dol_escape_htmltag(dol_print_date($finished, 'dayhour', 'tzuserrel')).'">';
+		print '<span class="nowrap">'.dol_print_date($finished, 'day', 'tzuserrel').'</span>';
+		if ($by !== '') {
+			print ' <span class="opacitymedium nowrap">'.$langs->trans('HeadsupFinishedBy', dol_escape_htmltag($by)).'</span>';
+		}
+		print '</td>';
+	} else {
+		print '<td class="right nowrap headsup-col-age" title="'.dol_escape_htmltag(dol_print_date($datep, 'dayhour')).'">'.headsup_age($datep).'</td>';
+	}
 
 	// Slider, then the status picker under it (or one of them, per setup)
 	print '<td class="right headsup-col-status"><div class="headsup-status-stack">';
 	$current = Headsup::statusOf($ev->percent);
-	$moreparam = 'data-id="'.((int) $ev->id).'" data-status="'.dol_escape_htmltag($current).'" title="'.dolPrintHTMLForAttribute($langs->transnoentitiesnoconv('HeadsupStatusOf')).'"';
+	$moreparam = 'data-id="'.((int) $ev->id).'" data-status="'.dol_escape_htmltag($current).'" aria-label="'.dolPrintHTMLForAttribute($langs->transnoentitiesnoconv('HeadsupStatusOf')).'"';
 	if ($statuscontrol !== 'picker') {
 		print Headsup::progressSliderHtml((int) $ev->id, (int) $ev->percent, $langs);
 	}

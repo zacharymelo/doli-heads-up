@@ -36,6 +36,16 @@ if (!$res) {
 	http_response_code(500);
 	exit;
 }
+/**
+ * @var DoliDB $db
+ * @var HookManager $hookmanager
+ * @var Translate $langs
+ * @var User $user
+ */
+'@phan-var-force DoliDB $db';
+'@phan-var-force HookManager $hookmanager';
+'@phan-var-force Translate $langs';
+'@phan-var-force User $user';
 
 dol_include_once('/headsup/class/headsup.class.php');
 
@@ -79,6 +89,7 @@ $elementid = GETPOSTINT('elementid');
 $clickedelement = GETPOST('clickedelement', 'aZ09arobase');
 $clickedid = GETPOSTINT('clickedid');
 $confirmed = GETPOSTINT('confirm');
+$project = GETPOSTINT('project');	// the sender's choice: a project id, -1 for none, 0 automatic
 
 if ($title === '') {
 	headsup_reply(400, array('ok' => 0, 'error' => 'A title is needed'));
@@ -98,6 +109,16 @@ $userids = array_values(array_filter(array_map('intval', $userids), function ($i
 }));
 if (empty($userids)) {
 	headsup_reply(400, array('ok' => 0, 'error' => 'Choose at least one active user'));
+}
+
+// A project the sender chose must be one they can see
+if ($project > 0) {
+	$allowed = $hu->projectsAllowed($user);
+	if (!isset($allowed[$project])) {
+		headsup_reply(403, array('ok' => 0, 'error' => 'You cannot use that project'));
+	}
+} elseif ($project < 0) {
+	$project = -1;
 }
 
 // The record on the page, and the record that was clicked (a link, or a link in the clicked row).
@@ -121,7 +142,7 @@ $secondaryrecord = $clickedrecord ? $record : null;
 $options = array();
 if (is_object($hookmanager)) {
 	$hookmanager->initHooks(array('headsupflag'));
-	$parameters = array('userids' => $userids, 'secondary' => $secondaryrecord, 'confirmed' => $confirmed);
+	$parameters = array('userids' => $userids, 'secondary' => $secondaryrecord, 'confirmed' => $confirmed, 'project' => $project);
 	$hookaction = 'flag';
 	$reshook = $hookmanager->executeHooks('headsupBeforeFlag', $parameters, $mainrecord, $hookaction);
 	if ($reshook < 0) {
@@ -134,6 +155,10 @@ if (is_object($hookmanager)) {
 	if (!empty($res['recordonly'])) {
 		$options['recordonly'] = true;
 	}
+}
+
+if ($project !== 0) {
+	$options['project'] = $project;
 }
 
 $context = array('page' => $page, 'box' => $box, 'clicked' => $clicked);

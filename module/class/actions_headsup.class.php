@@ -169,7 +169,8 @@ class ActionsHeadsup
 			print Headsup::progressSliderHtml((int) $object->id, (int) $object->percentage, $langs, true);
 		}
 		if ($control !== 'slider') {
-			print dolGetButtonAction($title, $title, 'default', $items, 'headsup-status', 1);
+			// No tooltip: it only repeats the button text and covers the first menu item
+			print dolGetButtonAction('', $title, 'default', $items, 'headsup-status', 1);
 		}
 		return 0;
 	}
@@ -234,6 +235,8 @@ class ActionsHeadsup
 			'queuePageUrl' => dol_buildpath('/headsup/queue.php', 1),
 			'usersUrl' => dol_buildpath('/headsup/ajax/users.php', 1),
 			'resolveUrl' => dol_buildpath('/headsup/ajax/resolve.php', 1),
+			'projectsUrl' => dol_buildpath('/headsup/ajax/projects.php', 1),
+			'projectField' => Headsup::projectField() ? 1 : 0,
 			'token' => newToken(),
 			'me' => (int) $user->id,
 			'canSend' => $user->hasRight('headsup', 'send') ? 1 : 0,

@@ -166,6 +166,10 @@ html.headsup-picking * {
 .headsup-desc {
 	resize: vertical;
 }
+.headsup-project {
+	width: 100%;
+	box-sizing: border-box;
+}
 .headsup-users {
 	display: flex;
 	flex-wrap: wrap;
@@ -246,6 +250,14 @@ html.headsup-picking * {
 	font-size: 0.9em;
 }
 .headsup-done-row {
+	opacity: 0.55;
+}
+
+/* Completed tab: finished rows at full strength; one reopened here fades until the page reloads */
+#headsup-events.headsup-completed tr.headsup-done-row {
+	opacity: 1;
+}
+#headsup-events.headsup-completed tr[data-id]:not(.headsup-done-row) {
 	opacity: 0.55;
 }
 

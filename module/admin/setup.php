@@ -127,6 +127,10 @@ print ' <input type="submit" class="button smallpaddingimp" value="'.$langs->tra
 print '</form></td>';
 print '<td class="opacitymedium">'.$langs->trans('HeadsupStatusControlDesc').'</td></tr>';
 
+print '<tr class="oddeven"><td>'.$langs->trans('HeadsupProjectField').'</td>';
+print '<td>'.ajax_constantonoff('HEADSUP_PROJECT_FIELD').'</td>';
+print '<td class="opacitymedium">'.$langs->trans('HeadsupProjectFieldDesc').'</td></tr>';
+
 print '<tr class="oddeven"><td>'.$langs->trans('HeadsupRefreshSeconds').'</td><td>';
 print '<form method="POST" action="'.$_SERVER['PHP_SELF'].'" style="margin:0;">';
 print '<input type="hidden" name="token" value="'.newToken().'">';

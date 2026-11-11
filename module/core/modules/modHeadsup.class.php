@@ -44,7 +44,7 @@ class modHeadsup extends DolibarrModules
 
 		$this->name = preg_replace('/^mod/i', '', get_class($this));
 		$this->description = "Alt+click anything to flag it for someone or report a problem; get a to-do when a record is assigned to you";
-		$this->version = '0.3.5';
+		$this->version = '0.3.7';
 		$this->editor_name = 'Zach Melo';
 		$this->editor_url = 'https://zachmelo.com';
 		$this->const_name = 'MAIN_MODULE_'.strtoupper($this->name);
@@ -153,12 +153,27 @@ class modHeadsup extends DolibarrModules
 		$this->menu[$r++] = array(
 			'fk_menu' => 'fk_mainmenu=headsup',
 			'type' => 'left',
+			'titre' => 'HeadsupCompleted',
+			'mainmenu' => 'headsup',
+			'leftmenu' => 'headsup_done',
+			'url' => '/headsup/queue.php?view=done',
+			'langs' => 'headsup@headsup',
+			'position' => 1013,
+			'enabled' => 'isModEnabled("headsup")',
+			'perms' => '1',
+			'target' => '',
+			'user' => 0,
+		);
+
+		$this->menu[$r++] = array(
+			'fk_menu' => 'fk_mainmenu=headsup',
+			'type' => 'left',
 			'titre' => 'HeadsupAllOpen',
 			'mainmenu' => 'headsup',
 			'leftmenu' => 'headsup_all',
 			'url' => '/headsup/queue.php?view=all',
 			'langs' => 'headsup@headsup',
-			'position' => 1013,
+			'position' => 1014,
 			'enabled' => 'isModEnabled("headsup")',
 			'perms' => '$user->hasRight("headsup", "readall")',
 			'target' => '',

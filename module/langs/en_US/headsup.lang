@@ -9,6 +9,7 @@ HeadsupMenu = Heads-up
 HeadsupMyQueue = My queue
 HeadsupSent = Sent by me
 HeadsupAllOpen = Everyone's open flags
+HeadsupCompleted = Completed
 
 # Event types
 ActionAC_HU_FLAG = Flag
@@ -83,3 +84,13 @@ HeadsupUsersShowAllDesc = On: everyone is listed as a button under "Assign to". 
 HeadsupShortlist = Short list
 HeadsupShortlistDesc = People shown as quick choices under "Assign to". Leave empty to rely on search alone.
 HeadsupPickMenu = Flag something on this page
+
+# Completed tab
+HeadsupCompletedTitle = My completed to-dos
+HeadsupFinished = Finished
+HeadsupFinishedBy = by %s
+HeadsupNothingDone = Nothing finished yet. To-dos you mark done show here.
+
+# Project field in the popup
+HeadsupProjectField = Project field in the popup
+HeadsupProjectFieldDesc = Off by default. On: the flag popup has a Project field (Automatic, No project, or one of the open projects the sender can see). Off: the to-do takes the project of the record it is about, or the one another module passes in.

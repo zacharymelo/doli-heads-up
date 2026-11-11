@@ -75,6 +75,62 @@ class Headsup
 	}
 
 	/**
+	 * Whether the popup shows the Project field (setup; off by default).
+	 *
+	 * @return bool
+	 */
+	public static function projectField()
+	{
+		return isModEnabled('project') && getDolGlobalInt('HEADSUP_PROJECT_FIELD') > 0;
+	}
+
+	/**
+	 * Ids of the projects $user may link a to-do to: the ones they can see.
+	 *
+	 * @param User $user User
+	 * @return array<int,int|string> Project id => ref (core documents the values as int)
+	 */
+	public function projectsAllowed($user)
+	{
+		if (!isModEnabled('project') || !$user->hasRight('projet', 'lire')) {
+			return array();
+		}
+		require_once DOL_DOCUMENT_ROOT.'/projet/class/project.class.php';
+		$project = new Project($this->db);
+		// 2: every project (the "see all projects" right), 0: public ones and those they are a contact of
+		$ids = $project->getProjectsAuthorizedForUser($user, $user->hasRight('projet', 'all', 'lire') ? 2 : 0, 0);
+		return is_array($ids) ? $ids : array();
+	}
+
+	/**
+	 * Open projects $user can see, newest first, for the popup's Project field.
+	 *
+	 * @param User $user  User
+	 * @param int  $limit Most to return
+	 * @return array<int,array{id:int,ref:string,title:string}>
+	 */
+	public function openProjectsFor($user, $limit = 300)
+	{
+		$allowed = $this->projectsAllowed($user);
+		if (!$allowed) {
+			return array();
+		}
+		$sql = "SELECT p.rowid, p.ref, p.title FROM ".MAIN_DB_PREFIX."projet as p";
+		$sql .= " WHERE p.fk_statut = 1 AND p.entity IN (".getEntity('project').")";
+		$sql .= " AND p.rowid IN (".$this->db->sanitize(implode(',', array_map('intval', array_keys($allowed)))).")";
+		$sql .= " ORDER BY p.datec DESC, p.rowid DESC";
+		$sql .= $this->db->plimit((int) $limit);
+		$out = array();
+		$resql = $this->db->query($sql);
+		if ($resql) {
+			while ($obj = $this->db->fetch_object($resql)) {
+				$out[] = array('id' => (int) $obj->rowid, 'ref' => (string) $obj->ref, 'title' => (string) $obj->title);
+			}
+		}
+		return $out;
+	}
+
+	/**
 	 * Language key of each state's name.
 	 *
 	 * @return array<string,string> todo, ack, progress, done
@@ -285,7 +341,9 @@ class Headsup
 	 * @param object|null $object    Record it is about (main link), or null
 	 * @param object|null $secondary Another record it relates to (fills project/third party/element if still empty)
 	 * @param array<string,mixed> $options 'recordonly' => true: link the record alone, with no third party, contact or
-	 *                                     project, so the to-do stays off those records' Events tabs
+	 *                                     project, so the to-do stays off those records' Events tabs;
+	 *                                     'project' => int: the sender's choice, a project id, or -1 for none
+	 *                                     (left out or 0: automatic, from the record or the headsupTodoProject hook)
 	 * @return int                   Event id, or <0 on error
 	 */
 	public function createTodo($user, $code, $userids, $label, $note, $object = null, $secondary = null, $options = array())
@@ -325,6 +383,17 @@ class Headsup
 			$ac->socpeopleassigned = array();
 		}
 
+		// Project: the sender's choice, else what another module says, else the record's
+		$project = isset($options['project']) ? (int) $options['project'] : 0;
+		if ($project === 0) {
+			$project = $this->projectFromHooks($code, $userids, $ac, $object, $secondary);
+		}
+		if ($project < 0) {
+			$ac->fk_project = 0;
+		} elseif ($project > 0 && $this->projectExists($project)) {
+			$ac->fk_project = $project;
+		}
+
 		$id = $ac->create($user);
 		if ($id <= 0) {
 			$this->error = $ac->error;
@@ -332,6 +401,49 @@ class Headsup
 			return -2;
 		}
 		return $id;
+	}
+
+	/**
+	 * Ask other modules which project a new to-do belongs to: hook 'headsupTodoProject',
+	 * context 'headsuptodo'. A hook puts 'project' in its results: a project id, or -1 for none.
+	 *
+	 * @param string      $code      One of the CODE_* constants
+	 * @param int[]       $userids   Users it is assigned to
+	 * @param ActionComm  $ac        Event being built (fk_project holds the automatic project)
+	 * @param object|null $object    Record it is about, or null
+	 * @param object|null $secondary Another record it relates to, or null
+	 * @return int                   Project id, -1 for none, 0 when no module says
+	 */
+	private function projectFromHooks($code, $userids, $ac, $object, $secondary)
+	{
+		global $hookmanager;
+
+		if (!($hookmanager instanceof HookManager)) {
+			return 0;
+		}
+		$hookmanager->initHooks(array('headsuptodo'));
+		$parameters = array('code' => $code, 'userids' => $userids, 'secondary' => $secondary, 'project' => (int) $ac->fk_project);
+		$hookaction = 'create';
+		$hookobject = $object;
+		$reshook = $hookmanager->executeHooks('headsupTodoProject', $parameters, $hookobject, $hookaction);
+		if ($reshook < 0 || !is_array($hookmanager->resArray) || !isset($hookmanager->resArray['project'])) {
+			return 0;
+		}
+		$project = (int) $hookmanager->resArray['project'];
+		return $project < 0 ? -1 : $project;
+	}
+
+	/**
+	 * Whether a project exists in this entity.
+	 *
+	 * @param int $id Project id
+	 * @return bool
+	 */
+	private function projectExists($id)
+	{
+		$sql = "SELECT rowid FROM ".MAIN_DB_PREFIX."projet WHERE rowid = ".((int) $id)." AND entity IN (".getEntity('project').")";
+		$resql = $this->db->query($sql);
+		return $resql && $this->db->num_rows($resql) > 0;
 	}
 
 	/**

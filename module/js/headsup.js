@@ -180,6 +180,20 @@
 		}
 	}
 
+	var projectsCache = null;
+
+	function loadProjects() {
+		if (projectsCache) {
+			return Promise.resolve(projectsCache);
+		}
+		return fetch(cfg().projectsUrl, { credentials: 'same-origin' })
+			.then(function (r) { return r.json(); })
+			.then(function (data) {
+				projectsCache = (data && data.projects) || [];
+				return projectsCache;
+			});
+	}
+
 	function loadUsers() {
 		if (usersCache) {
 			return Promise.resolve(usersCache);
@@ -200,6 +214,7 @@
 	 *   data-headsup-page                   link back to exactly this spot (path in Dolibarr)
 	 *   data-headsup-title, -quote          title and description to start from
 	 *   data-headsup-users                  user ids offered as quick choices, comma separated
+	 *   data-headsup-project                project id the to-do belongs to
 	 * Same shape as window.HeadsupOpen()'s options. */
 	function fromPage(target) {
 		function attr(name) {
@@ -216,6 +231,10 @@
 		opts.title = attr('title');
 		opts.description = attr('quote');
 		opts.users = attr('users').split(',').map(Number).filter(function (n) { return n > 0; });
+		var project = parseInt(attr('project'), 10);
+		if (project > 0) {
+			opts.project = { id: project };
+		}
 		return opts;
 	}
 
@@ -261,6 +280,19 @@
 		if (opts.description) {
 			desc.value = String(opts.description);
 		}
+		/* Project: the opener's (opts.project), else automatic. The field shows only when setup turns it on. */
+		var projectWanted = (opts.project && parseInt(opts.project.id, 10) > 0) ? parseInt(opts.project.id, 10) : 0;
+		var projectSelect = null;
+		if (c.projectField) {
+			projectSelect = el('select', { className: 'headsup-project' }, [
+				el('option', { value: '', text: 'Automatic (from the record)' }),
+				el('option', { value: '-1', text: 'No project' })
+			]);
+			if (projectWanted) {
+				projectSelect.appendChild(el('option', { value: String(projectWanted), text: (opts.project.label ? String(opts.project.label) : 'Project #' + projectWanted) }));
+				projectSelect.value = String(projectWanted);
+			}
+		}
 		var send = el('button', { type: 'submit', className: 'button headsup-send', text: 'Send' });
 		var cancel = el('button', { type: 'button', className: 'button button-cancel headsup-cancel', text: 'Cancel' });
 
@@ -289,6 +321,8 @@
 			title,
 			el('label', { className: 'headsup-label', text: 'Description' }),
 			desc,
+			projectSelect ? el('label', { className: 'headsup-label', text: 'Project' }) : null,
+			projectSelect,
 			el('div', { className: 'headsup-actions' }, [cancel, send])
 		]);
 
@@ -445,6 +479,10 @@
 				body.append('clickedelement', clickedRecord.element);
 				body.append('clickedid', String(clickedRecord.id));
 			}
+			var project = projectSelect ? projectSelect.value : (projectWanted ? String(projectWanted) : '');
+			if (project) {
+				body.append('project', project);
+			}
 			send.disabled = true;
 			fetch(c.flagUrl, { method: 'POST', credentials: 'same-origin', body: body })
 				.then(function (r) { return r.json().catch(function () { return { ok: 0, error: 'Server error ' + r.status }; }); })
@@ -501,6 +539,23 @@
 					place();
 				})
 				.catch(function () {});
+		}
+
+		if (projectSelect) {
+			loadProjects().then(function (list) {
+				if (!popup) {
+					return;
+				}
+				var keep = projectSelect.value;
+				list.forEach(function (p) {
+					if (projectSelect.querySelector('option[value="' + p.id + '"]')) {
+						projectSelect.querySelector('option[value="' + p.id + '"]').textContent = p.ref + ' – ' + p.title;
+						return;
+					}
+					projectSelect.appendChild(el('option', { value: String(p.id), text: p.ref + ' – ' + p.title }));
+				});
+				projectSelect.value = keep;
+			}).catch(function () {});
 		}
 
 		loadUsers().then(function () {
@@ -679,6 +734,7 @@
 	 *   title        title
 	 *   description  description
 	 *   users        user ids offered as quick choices instead of the short list
+	 *   project      {id, label}: the project the to-do belongs to (preselected in the Project field)
 	 *   onSent       function (reply) called once it is saved
 	 */
 	window.HeadsupOpen = function (opts) {
