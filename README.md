@@ -76,7 +76,7 @@ When a new flag, problem report or assignment reaches you, the browser shows a n
 
 ## Setup
 
-Home → Setup → Modules → Heads-up: to-do on assignment (on/off), who receives problem reports, show every user in the popup (on/off), short list, status control (slider, status picker or both, on My queue and the event card; default both), project field in the popup (off by default: Automatic, No project, or one of the open projects the sender can see), top bar refresh interval, debug mode (`/custom/headsup/ajax/debug.php`).
+Home → Setup → Modules → Heads-up: to-do on assignment (on/off), who receives problem reports, show every user in the popup (on/off), short list, status control (slider, status picker or both, on My queue and the event card; default both), project field in the popup (off by default: Automatic unless the sender searches for one of the open projects they can see, or picks No project), top bar refresh interval, debug mode (`/custom/headsup/ajax/debug.php`).
 
 ## Not in this version
 

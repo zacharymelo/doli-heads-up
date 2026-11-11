@@ -180,18 +180,21 @@
 		}
 	}
 
-	var projectsCache = null;
-
-	function loadProjects() {
-		if (projectsCache) {
-			return Promise.resolve(projectsCache);
+	/* Open projects the user can see matching q, or the one project with that id */
+	function findProjects(q, id) {
+		var params = new URLSearchParams();
+		if (id) {
+			params.append('id', String(id));
+		} else {
+			params.append('q', q);
 		}
-		return fetch(cfg().projectsUrl, { credentials: 'same-origin' })
+		return fetch(cfg().projectsUrl + '?' + params.toString(), { credentials: 'same-origin' })
 			.then(function (r) { return r.json(); })
-			.then(function (data) {
-				projectsCache = (data && data.projects) || [];
-				return projectsCache;
-			});
+			.then(function (data) { return (data && data.projects) || []; });
+	}
+
+	function projectName(p) {
+		return p.ref + (p.title ? ' – ' + p.title : '');
 	}
 
 	function loadUsers() {
@@ -282,16 +285,17 @@
 		}
 		/* Project: the opener's (opts.project), else automatic. The field shows only when setup turns it on. */
 		var projectWanted = (opts.project && parseInt(opts.project.id, 10) > 0) ? parseInt(opts.project.id, 10) : 0;
-		var projectSelect = null;
+		/* null: automatic; {id, name}: a project; {id: -1}: no project */
+		var projectChosen = projectWanted ? { id: projectWanted, name: (opts.project.label ? String(opts.project.label) : 'Project #' + projectWanted) } : null;
+		var projectBox = null;
+		var projectChip = null;
+		var projectFilter = null;
+		var projectList = null;
 		if (c.projectField) {
-			projectSelect = el('select', { className: 'headsup-project' }, [
-				el('option', { value: '', text: 'Automatic (from the record)' }),
-				el('option', { value: '-1', text: 'No project' })
-			]);
-			if (projectWanted) {
-				projectSelect.appendChild(el('option', { value: String(projectWanted), text: (opts.project.label ? String(opts.project.label) : 'Project #' + projectWanted) }));
-				projectSelect.value = String(projectWanted);
-			}
+			projectChip = el('div', { className: 'headsup-chosen' });
+			projectFilter = el('input', { type: 'search', className: 'headsup-filter headsup-project-filter', placeholder: 'Automatic · search to change', 'aria-label': 'Project' });
+			projectList = el('div', { className: 'headsup-users' });
+			projectBox = el('div', { className: 'headsup-project' }, [projectChip, projectFilter, projectList]);
 		}
 		var send = el('button', { type: 'submit', className: 'button headsup-send', text: 'Send' });
 		var cancel = el('button', { type: 'button', className: 'button button-cancel headsup-cancel', text: 'Cancel' });
@@ -321,8 +325,8 @@
 			title,
 			el('label', { className: 'headsup-label', text: 'Description' }),
 			desc,
-			projectSelect ? el('label', { className: 'headsup-label', text: 'Project' }) : null,
-			projectSelect,
+			projectBox ? el('label', { className: 'headsup-label', text: 'Project' }) : null,
+			projectBox,
 			el('div', { className: 'headsup-actions' }, [cancel, send])
 		]);
 
@@ -479,9 +483,8 @@
 				body.append('clickedelement', clickedRecord.element);
 				body.append('clickedid', String(clickedRecord.id));
 			}
-			var project = projectSelect ? projectSelect.value : (projectWanted ? String(projectWanted) : '');
-			if (project) {
-				body.append('project', project);
+			if (projectChosen) {
+				body.append('project', String(projectChosen.id));
 			}
 			send.disabled = true;
 			fetch(c.flagUrl, { method: 'POST', credentials: 'same-origin', body: body })
@@ -541,21 +544,81 @@
 				.catch(function () {});
 		}
 
-		if (projectSelect) {
-			loadProjects().then(function (list) {
-				if (!popup) {
+		if (projectBox) {
+			/* The chosen project as a chip (× goes back to automatic), or the search box */
+			var renderProject = function () {
+				projectChip.textContent = '';
+				projectList.textContent = '';
+				projectFilter.value = '';
+				projectFilter.hidden = !!projectChosen;
+				if (projectChosen) {
+					var chip = el('span', { className: 'headsup-chip', text: projectChosen.id < 0 ? 'No project' : projectChosen.name });
+					var x = el('button', { type: 'button', className: 'headsup-chip-x', 'aria-label': 'Back to automatic', text: '×' });
+					x.addEventListener('click', function () {
+						projectChosen = null;
+						renderProject();
+						projectFilter.focus();
+					});
+					chip.appendChild(x);
+					projectChip.appendChild(chip);
+				}
+				place();
+			};
+			var chooseProject = function (choice) {
+				projectChosen = choice;
+				renderProject();
+			};
+			var projectTimer = 0;
+			var projectSeq = 0;
+			projectFilter.addEventListener('input', function () {
+				clearTimeout(projectTimer);
+				var q = projectFilter.value.trim();
+				if (!q) {
+					projectList.textContent = '';
+					place();
 					return;
 				}
-				var keep = projectSelect.value;
-				list.forEach(function (p) {
-					if (projectSelect.querySelector('option[value="' + p.id + '"]')) {
-						projectSelect.querySelector('option[value="' + p.id + '"]').textContent = p.ref + ' – ' + p.title;
-						return;
+				projectTimer = setTimeout(function () {
+					var seq = ++projectSeq;
+					findProjects(q, 0).then(function (list) {
+						if (!popup || seq !== projectSeq) {
+							return;
+						}
+						projectList.textContent = '';
+						list.forEach(function (p) {
+							var b = el('button', { type: 'button', className: 'headsup-user', text: projectName(p) });
+							b.addEventListener('click', function () { chooseProject({ id: p.id, name: projectName(p) }); });
+							projectList.appendChild(b);
+						});
+						if (!list.length) {
+							projectList.appendChild(el('span', { className: 'opacitymedium', text: 'No match' }));
+						}
+						var none = el('button', { type: 'button', className: 'headsup-user headsup-project-none', text: 'No project' });
+						none.addEventListener('click', function () { chooseProject({ id: -1 }); });
+						projectList.appendChild(none);
+						place();
+					}).catch(function () {});
+				}, 250);
+			});
+			projectFilter.addEventListener('keydown', function (e) {
+				if (e.key === 'Enter') {
+					e.preventDefault();
+					var first = projectList.querySelector('.headsup-user');
+					if (first) {
+						first.click();
 					}
-					projectSelect.appendChild(el('option', { value: String(p.id), text: p.ref + ' – ' + p.title }));
-				});
-				projectSelect.value = keep;
-			}).catch(function () {});
+				}
+			});
+			renderProject();
+			/* A project passed in by id: show its name */
+			if (projectWanted && !(opts.project && opts.project.label)) {
+				findProjects('', projectWanted).then(function (list) {
+					if (popup && list.length && projectChosen && projectChosen.id === projectWanted) {
+						projectChosen.name = projectName(list[0]);
+						renderProject();
+					}
+				}).catch(function () {});
+			}
 		}
 
 		loadUsers().then(function () {

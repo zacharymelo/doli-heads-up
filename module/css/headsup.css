@@ -166,9 +166,11 @@ html.headsup-picking * {
 .headsup-desc {
 	resize: vertical;
 }
-.headsup-project {
-	width: 100%;
-	box-sizing: border-box;
+.headsup-project-filter[hidden] {
+	display: none;
+}
+.headsup-project-none {
+	font-style: italic;
 }
 .headsup-users {
 	display: flex;

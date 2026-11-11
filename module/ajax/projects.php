@@ -10,7 +10,7 @@
 /**
  * \file    ajax/projects.php
  * \ingroup headsup
- * \brief   Open projects the user can see, for the popup's Project field (JSON)
+ * \brief   Search the open projects the user can see, for the popup's Project field (JSON)
  */
 if (!defined('NOTOKENRENEWAL')) {
 	define('NOTOKENRENEWAL', 1);
@@ -52,8 +52,11 @@ if (!isModEnabled('headsup') || !$user->hasRight('headsup', 'send')) {
 	exit;
 }
 
+$search = dol_trunc(trim(GETPOST('q', 'alphanohtml')), 100, 'right', 'UTF-8', 1);
+$id = GETPOSTINT('id');
+
 $hu = new Headsup($db);
 print json_encode(array(
 	'ok' => 1,
-	'projects' => $hu->openProjectsFor($user),
+	'projects' => $hu->openProjectsFor($user, $search, 10, $id),
 ));

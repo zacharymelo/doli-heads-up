@@ -93,4 +93,4 @@ HeadsupNothingDone = Nothing finished yet. To-dos you mark done show here.
 
 # Project field in the popup
 HeadsupProjectField = Project field in the popup
-HeadsupProjectFieldDesc = Off by default. On: the flag popup has a Project field (Automatic, No project, or one of the open projects the sender can see). Off: the to-do takes the project of the record it is about, or the one another module passes in.
+HeadsupProjectFieldDesc = Off by default. On: the flag popup has a Project field. It stays on Automatic unless the sender searches for one of the open projects they can see (or picks No project). Off: the to-do takes the project of the record it is about, or the one another module passes in.

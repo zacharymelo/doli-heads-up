@@ -103,21 +103,32 @@ class Headsup
 	}
 
 	/**
-	 * Open projects $user can see, newest first, for the popup's Project field.
+	 * Open projects $user can see whose ref or title matches $search, newest first,
+	 * for the popup's Project search. With $id, that one project (open or not) instead.
 	 *
-	 * @param User $user  User
-	 * @param int  $limit Most to return
+	 * @param User   $user   User
+	 * @param string $search Words to find in the ref or title
+	 * @param int    $limit  Most to return
+	 * @param int    $id     One project id, to show the name of a project passed in
 	 * @return array<int,array{id:int,ref:string,title:string}>
 	 */
-	public function openProjectsFor($user, $limit = 300)
+	public function openProjectsFor($user, $search = '', $limit = 10, $id = 0)
 	{
 		$allowed = $this->projectsAllowed($user);
 		if (!$allowed) {
 			return array();
 		}
 		$sql = "SELECT p.rowid, p.ref, p.title FROM ".MAIN_DB_PREFIX."projet as p";
-		$sql .= " WHERE p.fk_statut = 1 AND p.entity IN (".getEntity('project').")";
+		$sql .= " WHERE p.entity IN (".getEntity('project').")";
 		$sql .= " AND p.rowid IN (".$this->db->sanitize(implode(',', array_map('intval', array_keys($allowed)))).")";
+		if ($id > 0) {
+			$sql .= " AND p.rowid = ".((int) $id);
+		} else {
+			$sql .= " AND p.fk_statut = 1";
+			if ($search !== '') {
+				$sql .= natural_search(array('p.ref', 'p.title'), $search);
+			}
+		}
 		$sql .= " ORDER BY p.datec DESC, p.rowid DESC";
 		$sql .= $this->db->plimit((int) $limit);
 		$out = array();
