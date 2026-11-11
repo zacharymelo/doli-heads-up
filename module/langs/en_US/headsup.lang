@@ -1,0 +1,85 @@
+# Module
+Module520900Name = Heads-up
+Module520900Desc = Alt+click anything to flag it for someone or report a problem; get a to-do when a record is assigned to you
+Permission52090001 = Send flags and problem reports
+Permission52090002 = See everyone's flags and problem reports
+
+# Menus
+HeadsupMenu = Heads-up
+HeadsupMyQueue = My queue
+HeadsupSent = Sent by me
+HeadsupAllOpen = Everyone's open flags
+
+# Event types
+ActionAC_HU_FLAG = Flag
+ActionAC_HU_PROBLEM = Problem report
+ActionAC_HU_ASSIGN = Assignment
+
+# Queue page
+HeadsupForMe = For me
+HeadsupNothingOpen = Nothing waiting. Alt+click anything in Dolibarr to flag it for someone.
+HeadsupAssignedToMe = Assigned to me
+HeadsupMyLeads = Leads and projects
+HeadsupMyThirdparties = Third parties I'm the sales rep for
+HeadsupMyProposals = Open proposals I follow
+HeadsupMyOrders = Open orders I follow
+HeadsupMyTasks = My open tasks
+HeadsupNone = None
+HeadsupFrom = From
+HeadsupTo = To
+HeadsupRecord = Record
+HeadsupWhat = What
+HeadsupAge = Age
+HeadsupType = Type
+HeadsupRole = Role
+HeadsupDone = Done
+HeadsupMarkDone = Mark done
+HeadsupAcknowledge = Acknowledge
+HeadsupAcknowledged = Acknowledged
+HeadsupAcknowledgeTitle = Say you've seen it: it stays in your queue, but no longer counts in the top bar
+HeadsupReopen = Back to to-do
+HeadsupInProgress = In progress
+HeadsupStatusButton = Status: %s
+HeadsupStatusOf = Status of this to-do. Anything but To do clears it from the top bar count.
+HeadsupToDo = To do
+HeadsupAckedBy = Acknowledged by %s, %s
+HeadsupDoneBy = Done by %s, %s
+HeadsupInProgressBy = Marked in progress by %s, %s
+HeadsupReopenedBy = Back to to-do by %s, %s
+HeadsupProgress = Progress
+HeadsupProgressTitle = How far along it is: 0%% To do, 10%% Acknowledged, 25%% to 75%% In progress, 100%% Done.
+HeadsupOpenPage = Open page
+HeadsupShowDone = Show done
+HeadsupHideDone = Hide done
+HeadsupMarkedDone = Marked done
+HeadsupSentTitle = Sent by me
+HeadsupAllTitle = Everyone's open flags
+HeadsupRecentDone = Done in the last 30 days
+
+# Assignment to-dos
+HeadsupAssignedLabel = %s on %s
+HeadsupAssignedNote = %s made you %s on %s.
+HeadsupSalesRep = Sales representative
+
+# Setup
+HeadsupSetup = Heads-up setup
+HeadsupNotifyAssignments = To-do on assignment
+HeadsupNotifyAssignmentsDesc = When someone adds another user to a project, proposal, order, task or third party, that user gets a to-do in their queue. Assigning yourself never creates one.
+HeadsupProblemUser = Problem reports go to
+HeadsupProblemUserDesc = Pre-selected in the "Report a problem" tab. Empty means the first active admin.
+HeadsupStatusControl = Status control
+HeadsupStatusControlDesc = What My queue rows and the event card show to move a to-do between to do, acknowledged, in progress and done: the progress slider, the status picker, or both.
+HeadsupControlBoth = Slider and status picker
+HeadsupControlSlider = Progress slider only
+HeadsupControlPicker = Status picker only
+HeadsupRefreshSeconds = Top bar refresh (seconds)
+HeadsupRefreshSecondsDesc = How often the open count next to the flag icon refreshes.
+HeadsupHowTo = How to use it: Alt+click (Option+click on a Mac) anything on any page, or click the flag in the top bar and then click what you mean.
+DebugMode = Debug mode
+DebugModeDesc = When on, admins can open /custom/headsup/ajax/debug.php for diagnostics.
+HeadsupPickTitle = Flag something: click this, then click what you mean (or Alt+click it)
+HeadsupUsersShowAll = Show every user in the popup
+HeadsupUsersShowAllDesc = On: everyone is listed as a button under "Assign to". Off: only the short list below is shown, and anyone else is found by typing their name.
+HeadsupShortlist = Short list
+HeadsupShortlistDesc = People shown as quick choices under "Assign to". Leave empty to rely on search alone.
+HeadsupPickMenu = Flag something on this page

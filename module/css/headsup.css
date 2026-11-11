@@ -1,0 +1,367 @@
+/* Heads-up popup, pick mode and top bar */
+
+/* Top bar: one flag icon with the open count, and its menu */
+.headsup-top {
+	position: relative;
+	margin-right: 10px;	/* room for the bubble, which sticks out on the right */
+}
+a.headsup-badge {
+	position: relative;
+	display: inline-block;
+	text-decoration: none;
+}
+.headsup-badge .headsup-count {
+	position: absolute;
+	top: -2px;
+	right: -9px;
+	min-width: 14px;
+	padding: 0 3px;
+	box-sizing: border-box;
+	border-radius: 7px;
+	background: #d93025;
+	color: #fff;
+	box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.85);
+	font-size: 9px;
+	font-weight: bold;
+	line-height: 14px;
+	text-align: center;
+	white-space: nowrap;
+	pointer-events: none;
+}
+.headsup-badge-zero .headsup-count {
+	display: none;
+}
+.headsup-menu {
+	position: absolute;
+	right: 0;
+	top: calc(100% + 8px);
+	z-index: 1100;
+	min-width: 220px;
+	padding: 4px 0;
+	text-align: left;
+	white-space: nowrap;
+	color: var(--colortext, #222);
+	background: var(--colorbackbody, #fff);
+	border-radius: 6px;
+	box-shadow: 0 6px 24px rgba(0, 0, 0, 0.22);
+	font-size: 13px;
+	line-height: 1.35;
+}
+.headsup-menu[hidden] {
+	display: none;
+}
+.headsup-menu a.headsup-menu-item {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	padding: 8px 12px;
+	color: inherit !important;
+	text-decoration: none;
+}
+.headsup-menu a.headsup-menu-item:hover,
+.headsup-menu a.headsup-menu-item:focus {
+	background: var(--colorbacklinepairhover, #f2f6fc);
+}
+.headsup-menu-hint {
+	margin-left: auto;
+	padding-left: 12px;
+	opacity: 0.55;
+	font-size: 11px;
+}
+.headsup-menu-count {
+	opacity: 0.65;
+}
+
+/* Pick mode */
+html.headsup-picking,
+html.headsup-picking * {
+	cursor: crosshair !important;
+}
+.headsup-banner {
+	position: fixed;
+	top: 64px;
+	left: 50%;
+	transform: translateX(-50%);
+	z-index: 100001;
+	padding: 6px 14px;
+	border-radius: 16px;
+	background: #2c3e50;
+	color: #fff;
+	font-size: 0.9em;
+	box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+	pointer-events: none;
+}
+
+/* Popup */
+.headsup-popup {
+	position: fixed;
+	z-index: 100002;
+	width: 340px;
+	max-width: calc(100vw - 16px);
+	max-height: calc(100vh - 16px);
+	overflow: auto;
+	box-sizing: border-box;
+	padding: 12px;
+	border: 1px solid #bbb;
+	border-radius: 6px;
+	background: #fff;
+	color: #222;
+	box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
+	font-size: 0.95em;
+	cursor: auto;
+}
+.headsup-popup * {
+	cursor: auto;
+}
+.headsup-popup button {
+	cursor: pointer;
+}
+.headsup-tabs {
+	display: flex;
+	gap: 4px;
+	margin-bottom: 8px;
+	border-bottom: 1px solid #ddd;
+}
+.headsup-tab {
+	padding: 5px 10px;
+	border: 0;
+	border-bottom: 2px solid transparent;
+	background: none;
+	color: #555;
+	font: inherit;
+}
+.headsup-tab-on {
+	border-bottom-color: #2c6fb7;
+	color: #222;
+	font-weight: bold;
+}
+.headsup-where {
+	margin-bottom: 6px;
+	color: #666;
+	font-size: 0.9em;
+	overflow-wrap: anywhere;
+}
+.headsup-linked {
+	margin-bottom: 6px;
+	color: #2c6fb7;
+	font-size: 0.9em;
+	font-weight: bold;
+	overflow-wrap: anywhere;
+}
+.headsup-linked:empty {
+	display: none;
+}
+.headsup-label {
+	display: block;
+	margin: 8px 0 3px;
+	font-weight: bold;
+	font-size: 0.9em;
+}
+.headsup-filter,
+.headsup-title,
+.headsup-desc {
+	width: 100%;
+	box-sizing: border-box;
+}
+.headsup-desc {
+	resize: vertical;
+}
+.headsup-users {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+	margin-top: 4px;
+}
+.headsup-user {
+	padding: 2px 8px;
+	border: 1px solid #ccc;
+	border-radius: 12px;
+	background: #f6f6f6;
+	color: #222;
+	font: inherit;
+	font-size: 0.9em;
+}
+.headsup-user:hover,
+.headsup-user:focus {
+	background: #e3eefa;
+	border-color: #2c6fb7;
+}
+.headsup-chosen {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+}
+.headsup-chosen:empty {
+	display: none;
+}
+.headsup-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 2px;
+	padding: 2px 4px 2px 8px;
+	border-radius: 12px;
+	background: #2c6fb7;
+	color: #fff;
+	font-size: 0.9em;
+}
+.headsup-chip-x {
+	border: 0;
+	background: none;
+	color: #fff;
+	font-size: 1.1em;
+	line-height: 1;
+}
+.headsup-actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: 6px;
+	margin-top: 10px;
+}
+
+/* Toast */
+.headsup-toast {
+	position: fixed;
+	bottom: 20px;
+	left: 50%;
+	transform: translateX(-50%);
+	z-index: 100003;
+	padding: 8px 16px;
+	border-radius: 4px;
+	background: #2e7d32;
+	color: #fff;
+	box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+	transition: opacity 0.4s;
+}
+.headsup-toast-error {
+	background: #c0392b;
+}
+.headsup-toast-out {
+	opacity: 0;
+}
+
+/* Queue page */
+.headsup-note {
+	white-space: normal;
+	color: #555;
+	font-size: 0.9em;
+}
+.headsup-done-row {
+	opacity: 0.55;
+}
+
+/* Progress slider: My queue rows and the event card */
+.headsup-progress-wrap {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	margin: 0 8px;
+	vertical-align: middle;
+}
+.headsup-progress {
+	width: 110px;
+	cursor: pointer;
+}
+.headsup-progress-label {
+	min-width: 9em;
+	font-size: 0.9em;
+	color: #555;
+}
+
+/* My queue: slider with the status picker under it */
+.headsup-status-stack {
+	display: inline-flex;
+	flex-direction: column;
+	align-items: flex-end;
+	gap: 4px;
+}
+.headsup-status-stack .headsup-progress-wrap {
+	margin: 0;
+	flex-wrap: wrap;
+	justify-content: flex-end;
+	max-width: 150px;
+}
+.headsup-status-stack .headsup-progress-label {
+	min-width: 0;
+	text-align: right;
+}
+/* Titles, records and names wrap, so the table fits beside the left menu instead of widening the page */
+#headsup-events .headsup-col-what,
+#headsup-events .headsup-col-record,
+#headsup-events .headsup-col-who {
+	white-space: normal;
+}
+#headsup-events .headsup-col-what {
+	min-width: 10em;
+}
+
+/* My queue on a phone or tablet (the table needs about 940px beside the left
+   menu): each to-do as a card (title, then type, sender and age, the record,
+   and the controls), with no sideways scroll */
+@media only screen and (max-width: 1000px) {
+	#headsup-events tr.liste_titre {
+		display: none;
+	}
+	#headsup-events tr[data-id] {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		padding: 6px 0;
+		border-bottom: 1px solid #ddd;
+	}
+	#headsup-events tr[data-id] > td {
+		display: block;
+		height: auto;
+		overflow: visible;
+		border: 0;
+		padding: 2px 8px;
+		max-width: none;
+		white-space: normal;
+	}
+	#headsup-events .headsup-col-what {
+		order: 1;
+		flex: 1 1 100%;
+	}
+	#headsup-events .headsup-col-type {
+		order: 2;
+	}
+	#headsup-events .headsup-col-who {
+		order: 3;
+	}
+	#headsup-events .headsup-col-who::before {
+		content: attr(data-label) ": ";
+		color: #888;
+	}
+	#headsup-events .headsup-col-age {
+		order: 4;
+	}
+	#headsup-events .headsup-col-record {
+		order: 5;
+		flex: 1 1 100%;
+	}
+	#headsup-events .headsup-col-record:empty {
+		display: none;
+	}
+	#headsup-events .headsup-col-status {
+		order: 6;
+		flex: 1 1 100%;
+		text-align: left;
+	}
+	#headsup-events .headsup-status-stack {
+		flex-direction: row;
+		flex-wrap: wrap;
+		align-items: center;
+	}
+	#headsup-events .headsup-status-stack .headsup-progress-wrap {
+		flex-wrap: nowrap;
+		max-width: none;
+	}
+}
+
+@media (prefers-color-scheme: dark) {
+	body.theme-dark .headsup-popup,
+	html[data-theme="dark"] .headsup-popup {
+		background: #2b2b2b;
+		color: #eee;
+		border-color: #555;
+	}
+}
