@@ -1,0 +1,90 @@
+# Architecture
+
+## Storage
+
+Heads-up stores nothing of its own. A to-do is an `ActionComm` (agenda event):
+
+| Event field | Heads-up meaning |
+|---|---|
+| `code` / `type_code` | `AC_HU_FLAG`, `AC_HU_PROBLEM` or `AC_HU_ASSIGN`, three event types the module adds to `c_actioncomm` (ids 520901–520903) |
+| `label` | The title |
+| `note_private` | The description, followed by the context: page, box, clicked text, and the linked record with its URL. The state changes are appended here too |
+| `fk_user_author` | The sender |
+| `userownerid`, `userassigned` | The people it is assigned to (the first is the owner) |
+| `percentage` | The state (see below) |
+| `elementtype`, `fk_element` | The record it is about (`myobject@mymodule` for custom modules) |
+| `socid`, `fk_project`, `contact_id` | That record's third party, project and contact |
+
+### States
+
+| Percent | State |
+|---|---|
+| `0` | To do (the only state counted in the top bar bubble) |
+| `10` | Acknowledged |
+| `1`–`99` (except 10) | In progress (`50` when set from the picker) |
+| `≥ 100`, or `< 0` | Done |
+
+The slider stops at `0, 10, 25, 50, 75, 100`. `Headsup::setStatus()` and `Headsup::setProgress()` change the percent. They also append "*State* by *User*, *date*" to the note.
+
+## How a flag is linked
+
+`Headsup::createTodo()` builds the event like this:
+
+1. **Main record:** the record that was clicked. If nothing was clicked, it is the page's record. `linkToObject()` sets:
+   - the record itself as `elementtype`/`fk_element`
+   - its third party (`socid`/`fk_soc`)
+   - its project (`fk_project`)
+   - for a contact, `contact_id`
+2. **Secondary record:** the page's record, when it differs from the main record. It fills in only the links that are still empty.
+3. **`recordonly`** (from the `headsupBeforeFlag` hook): clears the third party, project and contact.
+4. **Project:** the sender's choice. If there is none, the `headsupTodoProject` hook decides. If no hook answers, the project found in steps 1–2 is kept.
+
+### From the browser to a record
+
+The browser sends the `href`s it sees. `Headsup::parseRecordUrl()` matches them against core card and tab URLs, plus custom modules' `*_card.php?id=` pages. `Headsup::fetchRecord()` then loads the record to check that it exists.
+
+`ActionsHeadsup::printCommonFooter` passes the page's own record to the browser, but only when the page URL is that record's card or tab. List pages reuse `$object` for every row, so their last row is never taken as "the page's record".
+
+## Assignments
+
+`InterfaceHeadsupTrigger` listens to two kinds of trigger:
+
+- `*_ADD_CONTACT` (any element): the newest internal contact on the record is taken as the user just added, because `add_contact()` does not say which one it added. Their contact role becomes the title, e.g. "Project leader on PJ2611-0042".
+- `COMPANY_LINK_SALE_REPRESENTATIVE`: the user in `$object->context['commercial_modified']`.
+
+Both are skipped when the user assigns themselves or when **To-do on assignment** is off.
+
+## Hooks used
+
+| Context | Hook | Does |
+|---|---|---|
+| `main` | `printTopRightMenu` | The flag icon, open count and its menu |
+| `main` | `printCommonFooter` | `window.HEADSUP`: URLs, token, rights, setup choices and the page's record |
+| `main` | `doActions` | The event card's `action=headsup_status` links (checks the token and who may change it) |
+| `main` | `addMoreActionsButtons` | The progress slider and **Status: …** button on the event card |
+
+Hooks provided for other modules: `headsupBeforeFlag` (context `headsupflag`) and `headsupTodoProject` (context `headsuptodo`). See the [integration guide](integration.md).
+
+## Files
+
+```
+module/
+├── admin/setup.php                      Setup page
+├── ajax/
+│   ├── flag.php                         Save a flag or problem report
+│   ├── queue.php                        Open count; change state or progress
+│   ├── users.php                        Active users for "Assign to"
+│   ├── resolve.php                      Links → record, for "Links to: …"
+│   ├── projects.php                     Project search for the Project field
+│   └── debug.php                        Diagnostics (admins, Debug mode)
+├── class/
+│   ├── headsup.class.php                Core logic: create, link, states, queries
+│   └── actions_headsup.class.php        Hooks on the 'main' context
+├── core/
+│   ├── modules/modHeadsup.class.php     Module descriptor, event types, menus, rights
+│   └── triggers/interface_99_modHeadsup_HeadsupTrigger.class.php   Assignment to-dos
+├── css/headsup.css                      Popup, queue, slider, cards on small screens
+├── js/headsup.js                        Alt+click, pick mode, popup, notifications, queue controls
+├── langs/en_US/headsup.lang             Translations
+└── queue.php                            My queue page and its tabs
+```

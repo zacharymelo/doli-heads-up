@@ -189,7 +189,7 @@ class Headsup
 
 	/**
 	 * Set a Heads-up to-do's state, and add a line to its note saying who did
-	 * it and when ("Acknowledged by Becca Long, 11/11/2026 10:40").
+	 * it and when ("Acknowledged by Alex Martin, 11/11/2026 10:40").
 	 *
 	 * @param User       $user   User making the change
 	 * @param ActionComm $ac     Event (fetched with its assignees)
