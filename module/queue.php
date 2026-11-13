@@ -222,16 +222,22 @@ if ($user->hasRight('headsup', 'readall')) {
 }
 print dol_get_fiche_head($head, $view, '', 1);
 
+// New to-do: about something outside Dolibarr, so nothing to click on (headsup.js opens the popup)
+$newtodobutton = '';
+if ($user->hasRight('headsup', 'send')) {
+	$newtodobutton = dolGetButtonAction('', $langs->trans('HeadsupNewTodo'), 'default', $_SERVER['PHP_SELF'].'?view='.$view.'&newtodo=1', 'headsup-new');
+}
+
 if ($view === 'done') {
 	// The page size picker submits the form around it
 	$param = '&view=done'.($limit != (int) $conf->liste_limit ? '&limit='.((int) $limit) : '');
 	print '<form method="GET" action="'.dolPrintHTMLForAttribute($_SERVER['PHP_SELF']).'">';
 	print '<input type="hidden" name="view" value="done">';
-	print_barre_liste($langs->trans($titles[$view]), $page, $_SERVER['PHP_SELF'], $param, '', '', '', $num, $nbtotalofrecords, 'fa-check', 0, '', '', $limit, 0, 0, 1);
+	print_barre_liste($langs->trans($titles[$view]), $page, $_SERVER['PHP_SELF'], $param, '', '', '', $num, $nbtotalofrecords, 'fa-check', 0, $newtodobutton, '', $limit, 0, 0, 1);
 	print '</form>';
 } else {
 	$toggleurl = $_SERVER['PHP_SELF'].'?view='.$view.($showdone ? '' : '&showdone=1');
-	$morehtml = '<a class="butAction" href="'.dol_escape_htmltag($toggleurl).'">'.$langs->trans($showdone ? 'HeadsupHideDone' : 'HeadsupShowDone').'</a>';
+	$morehtml = $newtodobutton.'<a class="butAction" href="'.dol_escape_htmltag($toggleurl).'">'.$langs->trans($showdone ? 'HeadsupHideDone' : 'HeadsupShowDone').'</a>';
 	print load_fiche_titre($langs->trans($titles[$view]).' <span class="opacitymedium">('.count(array_filter($events, function ($e) {
 		return $e->percent < 100;
 	})).')</span>', $morehtml, 'fa-flag');

@@ -11,6 +11,8 @@
 	var picking = false;
 	var popup = null;
 	var usersCache = null;
+	/* On a phone the popup adds a history entry, so the back gesture closes it */
+	var historyPushed = false;
 
 	function cfg() {
 		return window.HEADSUP || null;
@@ -138,13 +140,33 @@
 
 	/* ---------- Popup ---------- */
 
-	function closePopup() {
+	/* Phone-sized screen: the popup fills it instead of sitting next to the click */
+	function isSmallScreen() {
+		return window.matchMedia && window.matchMedia('(max-width: 600px)').matches;
+	}
+
+	/* how: 'history' when the back gesture closed it, 'reopen' when another popup replaces it */
+	function closePopup(how) {
 		if (popup) {
 			popup.remove();
 			popup = null;
 		}
+		document.documentElement.classList.remove('headsup-popup-open');
 		document.removeEventListener('keydown', onPopupKey, true);
+		if (historyPushed && how !== 'reopen') {
+			historyPushed = false;
+			if (how !== 'history') {
+				window.history.back();
+			}
+		}
 	}
+
+	window.addEventListener('popstate', function () {
+		if (popup && historyPushed) {
+			historyPushed = false;
+			closePopup('history');
+		}
+	});
 
 	function onPopupKey(e) {
 		if (e.key === 'Escape') {
@@ -248,19 +270,21 @@
 		if (!c || !c.canSend) {
 			return;
 		}
-		closePopup();
+		closePopup('reopen');
 		opts = opts || {};
 		if (target) {
 			opts = fromPage(target);
 		}
 		askNotifyPermission();
+		/* A to-do about something outside Dolibarr (a phone call...): no record, no page */
+		var standalone = !target && !!opts.standalone;
 
 		var context = {
-			page: opts.page || (window.location.pathname + window.location.search),
+			page: standalone ? '' : (opts.page || (window.location.pathname + window.location.search)),
 			box: target ? boxTitle(target) : (opts.box || ''),
 			clicked: target ? clickedText(target) : ''
 		};
-		var record = opts.record || c.record;
+		var record = standalone ? null : (opts.record || c.record);
 		var clickedRecord = null;
 		/* A record the page declared for what was clicked wins over links found nearby */
 		var links = (target && !opts.record) ? nearbyLinks(target) : [];
@@ -310,10 +334,16 @@
 		if (!where.length && context.clicked) {
 			where.push('Clicked: ' + context.clicked);
 		}
-		var whereLine = el('div', { className: 'headsup-where', text: where.join(' · ') || document.title });
+		var whereLine = el('div', { className: 'headsup-where', text: standalone ? 'Not linked to a record' : (where.join(' · ') || document.title) });
 		var linkedLine = el('div', { className: 'headsup-linked' });
+		var close = el('button', { type: 'button', className: 'headsup-close', 'aria-label': 'Close', title: 'Close (Esc)', text: '×' });
+		var head = el('div', { className: 'headsup-head' }, [
+			el('span', { className: 'headsup-head-title', text: standalone ? 'New to-do' : 'Heads-up' }),
+			close
+		]);
 
 		var form = el('form', { className: 'headsup-form' }, [
+			head,
 			el('div', { className: 'headsup-tabs' }, [tabTodo, tabProblem]),
 			whereLine,
 			linkedLine,
@@ -332,10 +362,23 @@
 
 		popup = el('div', { className: 'headsup-popup', role: 'dialog', 'aria-label': 'Heads-up' }, [form]);
 		document.body.appendChild(popup);
+		if (isSmallScreen()) {
+			document.documentElement.classList.add('headsup-popup-open');
+			if (!historyPushed && window.history && window.history.pushState) {
+				window.history.pushState({ headsupPopup: 1 }, '');
+				historyPushed = true;
+			}
+		}
 
-		/* Place it next to the click, kept on screen (again whenever it grows). */
+		/* Place it next to the click, kept on screen (again whenever it grows).
+		 * On a phone the stylesheet makes it fill the screen instead. */
 		function place() {
 			if (!popup) {
+				return;
+			}
+			if (isSmallScreen()) {
+				popup.style.left = '';
+				popup.style.top = '';
 				return;
 			}
 			var w = popup.offsetWidth;
@@ -419,7 +462,7 @@
 				if (!Object.keys(selected).length && c.problemUser) {
 					selectUser(c.problemUser);
 				}
-				if (!title.value) {
+				if (!title.value && !standalone) {
 					title.value = 'Problem: ' + (context.box || context.clicked || document.title);
 				}
 				desc.placeholder = "What's wrong? What did you expect to see?";
@@ -442,7 +485,8 @@
 				}
 			}
 		});
-		cancel.addEventListener('click', closePopup);
+		cancel.addEventListener('click', function () { closePopup(); });
+		close.addEventListener('click', function () { closePopup(); });
 
 		form.addEventListener('submit', function (e) {
 			e.preventDefault();
@@ -636,7 +680,12 @@
 		document.documentElement.classList.toggle('headsup-picking', on);
 		var banner = document.querySelector('.headsup-banner');
 		if (on && !banner) {
-			document.body.appendChild(el('div', { className: 'headsup-banner', text: 'Click what you want to flag · Esc to cancel' }));
+			/* A Cancel button too: phones and tablets have no Esc key */
+			var touch = window.matchMedia && window.matchMedia('(hover: none)').matches;
+			document.body.appendChild(el('div', { className: 'headsup-banner' }, [
+				el('span', { text: touch ? 'Tap what you want to flag' : 'Click what you want to flag · Esc to cancel' }),
+				el('button', { type: 'button', className: 'headsup-banner-cancel', text: 'Cancel' })
+			]));
 		} else if (!on && banner) {
 			banner.remove();
 		}
@@ -656,6 +705,22 @@
 			return;
 		}
 		var menu = document.querySelector('.headsup-menu');
+		if (target.closest('.headsup-banner-cancel')) {
+			e.preventDefault();
+			e.stopPropagation();
+			setPicking(false);
+			return;
+		}
+		/* New to-do (top bar menu, My queue button): a blank popup, linked to nothing */
+		if (!picking && target.closest('.headsup-new, #headsup-new')) {
+			e.preventDefault();
+			e.stopPropagation();
+			if (menu) {
+				menu.hidden = true;
+			}
+			openNew();
+			return;
+		}
 		if (target.closest('.headsup-pick')) {
 			e.preventDefault();
 			e.stopPropagation();
@@ -798,6 +863,7 @@
 	 *   description  description
 	 *   users        user ids offered as quick choices instead of the short list
 	 *   project      {id, label}: the project the to-do belongs to (preselected in the Project field)
+	 *   standalone   true: about nothing on this page (no record, no page link), like the New to-do button
 	 *   onSent       function (reply) called once it is saved
 	 */
 	window.HeadsupOpen = function (opts) {
@@ -806,6 +872,30 @@
 		var y = typeof opts.y === 'number' ? opts.y : 60;
 		openPopup(null, x, y, opts);
 	};
+
+	/* A to-do that is not about anything on the page, near the top centre */
+	function openNew() {
+		openPopup(null, Math.max(8, window.innerWidth / 2 - 182), 60, { standalone: true });
+	}
+
+	/* My queue opened with ?newtodo=1 (left menu, a home screen bookmark): open it straight away */
+	document.addEventListener('DOMContentLoaded', function () {
+		var c = cfg();
+		if (!c || !c.canSend || !document.getElementById('headsup-new')) {
+			return;
+		}
+		var params = new URLSearchParams(window.location.search);
+		if (params.get('newtodo') !== '1') {
+			return;
+		}
+		/* Drop it from the address, so reloading or going back does not open it again */
+		params.delete('newtodo');
+		var rest = params.toString();
+		if (window.history && window.history.replaceState) {
+			window.history.replaceState(null, '', window.location.pathname + (rest ? '?' + rest : '') + window.location.hash);
+		}
+		openNew();
+	});
 
 	/* Used by the queue page after "Mark done". */
 	window.HeadsupSetCount = setCount;

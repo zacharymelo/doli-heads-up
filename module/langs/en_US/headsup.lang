@@ -10,6 +10,7 @@ HeadsupMyQueue = My queue
 HeadsupSent = Sent by me
 HeadsupAllOpen = Everyone's open flags
 HeadsupCompleted = Completed
+HeadsupNewTodo = New to-do
 
 # Event types
 ActionAC_HU_FLAG = Flag

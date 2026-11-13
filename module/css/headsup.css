@@ -90,6 +90,21 @@ html.headsup-picking * {
 	font-size: 0.9em;
 	box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
 	pointer-events: none;
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	white-space: nowrap;
+}
+/* The banner lets clicks through to the page, except on its Cancel button */
+.headsup-banner-cancel {
+	pointer-events: auto;
+	cursor: pointer !important;
+	padding: 3px 10px;
+	border: 1px solid rgba(255, 255, 255, 0.6);
+	border-radius: 12px;
+	background: transparent;
+	color: #fff;
+	font: inherit;
 }
 
 /* Popup */
@@ -115,6 +130,33 @@ html.headsup-picking * {
 }
 .headsup-popup button {
 	cursor: pointer;
+}
+/* Title and close button */
+.headsup-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin: -4px -4px 4px 0;
+}
+.headsup-head-title {
+	font-weight: bold;
+}
+.headsup-close {
+	min-width: 32px;
+	min-height: 32px;
+	padding: 0;
+	border: 0;
+	border-radius: 50%;
+	background: none;
+	color: inherit;
+	font-size: 22px;
+	line-height: 1;
+	opacity: 0.6;
+}
+.headsup-close:hover,
+.headsup-close:focus {
+	opacity: 1;
+	background: rgba(127, 127, 127, 0.15);
 }
 .headsup-tabs {
 	display: flex;
@@ -368,6 +410,107 @@ html.headsup-picking * {
 	#headsup-events .headsup-status-stack .headsup-progress-wrap {
 		flex-wrap: nowrap;
 		max-width: none;
+	}
+}
+
+/* Touch screens: bigger menu rows, and no Alt+click hint (there is no Alt key) */
+@media (hover: none) {
+	.headsup-menu a.headsup-menu-item {
+		padding: 12px 14px;
+	}
+	.headsup-menu-hint {
+		display: none;
+	}
+}
+
+/* Phone: the popup fills the screen, with the close button always at the top
+   and Send / Cancel always at the bottom */
+@media only screen and (max-width: 600px) {
+	.headsup-popup {
+		top: 0;
+		left: 0;
+		width: 100%;
+		max-width: none;
+		height: 100vh;
+		height: 100dvh;
+		max-height: none;
+		padding: 0 14px;
+		padding-bottom: env(safe-area-inset-bottom);
+		border: 0;
+		border-radius: 0;
+		font-size: 16px;
+		overscroll-behavior: contain;
+	}
+	.headsup-form {
+		display: flex;
+		flex-direction: column;
+		min-height: 100%;
+		background: inherit;	/* passed on to the sticky header and buttons */
+	}
+	.headsup-head {
+		position: sticky;
+		top: 0;
+		z-index: 1;
+		margin: 0 -14px 4px;
+		padding: 8px 6px 8px 14px;
+		padding-top: max(8px, env(safe-area-inset-top));
+		background: inherit;
+		border-bottom: 1px solid rgba(127, 127, 127, 0.25);
+	}
+	.headsup-close {
+		min-width: 44px;
+		min-height: 44px;
+		font-size: 28px;
+	}
+	/* 16px text, so iOS does not zoom in when a field gets focus */
+	.headsup-popup input,
+	.headsup-popup textarea {
+		font-size: 16px;
+		padding: 8px;
+	}
+	.headsup-tab {
+		padding: 10px 12px;
+	}
+	.headsup-user {
+		padding: 8px 12px;
+		font-size: 15px;
+	}
+	.headsup-chip {
+		padding: 6px 6px 6px 12px;
+		font-size: 15px;
+	}
+	.headsup-chip-x {
+		min-width: 28px;
+		font-size: 20px;
+	}
+	.headsup-actions {
+		position: sticky;
+		bottom: 0;
+		margin: auto -14px 0;
+		padding: 10px 14px;
+		background: inherit;
+		border-top: 1px solid rgba(127, 127, 127, 0.25);
+	}
+	.headsup-actions .button {
+		flex: 1 1 0;
+		margin: 0;
+		padding: 10px;
+		font-size: 16px;
+	}
+	/* The page behind does not scroll while the popup is open */
+	html.headsup-popup-open,
+	html.headsup-popup-open body {
+		overflow: hidden;
+	}
+	/* Pick mode banner at the bottom, in thumb reach */
+	.headsup-banner {
+		top: auto;
+		bottom: calc(16px + env(safe-area-inset-bottom));
+		padding: 8px 8px 8px 16px;
+		font-size: 15px;
+	}
+	.headsup-banner-cancel {
+		padding: 6px 14px;
 	}
 }
 

@@ -120,6 +120,22 @@ class modHeadsup extends DolibarrModules
 			'user' => 0,
 		);
 
+		// Opens My queue with the New to-do popup open (easy to reach, or bookmark, on a phone)
+		$this->menu[$r++] = array(
+			'fk_menu' => 'fk_mainmenu=headsup',
+			'type' => 'left',
+			'titre' => 'HeadsupNewTodo',
+			'mainmenu' => 'headsup',
+			'leftmenu' => 'headsup_new',
+			'url' => '/headsup/queue.php?newtodo=1',
+			'langs' => 'headsup@headsup',
+			'position' => 1010,
+			'enabled' => 'isModEnabled("headsup")',
+			'perms' => '$user->hasRight("headsup", "send")',
+			'target' => '',
+			'user' => 0,
+		);
+
 		$this->menu[$r++] = array(
 			'fk_menu' => 'fk_mainmenu=headsup',
 			'type' => 'left',

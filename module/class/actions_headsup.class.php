@@ -71,6 +71,8 @@ class ActionsHeadsup
 		$out .= '</div>';
 		$out .= '<div class="headsup-menu" hidden>';
 		if ($user->hasRight('headsup', 'send')) {
+			// A to-do about something outside Dolibarr (a call, an email still to come): nothing to click on
+			$out .= '<a href="'.dolPrintHTMLForAttributeUrl($queueurl.'?newtodo=1').'" class="headsup-new headsup-menu-item"><span class="fa fa-plus-circle pictofixedwidth"></span>'.dol_escape_htmltag($langs->trans('HeadsupNewTodo')).'</a>';
 			$out .= '<a href="#" class="headsup-pick headsup-menu-item"><span class="fa fa-crosshairs pictofixedwidth"></span>'.dol_escape_htmltag($langs->trans('HeadsupPickMenu')).'<span class="headsup-menu-hint">Alt+click</span></a>';
 		}
 		$out .= '<a href="'.$queueurl.'" class="headsup-menu-item"><span class="fa fa-inbox pictofixedwidth"></span>'.dol_escape_htmltag($langs->trans('HeadsupMyQueue')).' <span class="headsup-menu-count">('.((int) $count).')</span></a>';

@@ -5,7 +5,19 @@
 There are two ways to open the popup:
 
 - **Alt+click** (Option+click on a Mac) anything on any page. The click is caught before the browser acts on it, so links and buttons don't fire.
-- Click the **flag icon** in the top bar, choose **Flag something on this page**, then click what you mean. This is *pick mode*; press Esc to cancel.
+- Click the **flag icon** in the top bar, choose **Flag something on this page**, then click what you mean. This is *pick mode*; press Esc or the banner's **Cancel** button to cancel.
+
+To close the popup, press Esc, click the **×** in its corner, or click **Cancel**. On a phone the popup fills the screen, and the back gesture closes it too.
+
+### A to-do about something outside Dolibarr
+
+For a phone call, an email that hasn't arrived yet, or anything else with nothing to click on, use **New to-do**. You can find it in three places:
+
+- in the flag icon's menu in the top bar
+- as a button on **My queue**
+- under **Heads-up → New to-do** in the left menu, which opens My queue with the popup already open. On a phone you can bookmark it or add it to your home screen.
+
+This opens a blank popup that isn't linked to any record or page. If setup turns on the Project field, you can still choose a project.
 
 The popup has two tabs:
 
