@@ -249,6 +249,15 @@ class ActionsHeadsup
 		);
 
 		$this->resprints = '<script nonce="'.getNonce().'">window.HEADSUP = '.json_encode($config, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT).';</script>'."\n";
+
+		// Dolibarr links module stylesheets with no version in the address, so after
+		// an update browsers (Safari above all) keep using the old copy. Link it again
+		// with the file's date, so each deploy is fetched fresh. Same rules, so the
+		// second copy changes nothing once the cache has caught up.
+		$cssfile = dol_buildpath('/headsup/css/headsup.css', 0);
+		if ($cssfile && is_file($cssfile)) {
+			$this->resprints .= '<link rel="stylesheet" type="text/css" href="'.dol_escape_htmltag(dol_buildpath('/headsup/css/headsup.css', 1).'?v='.filemtime($cssfile)).'">'."\n";
+		}
 		return 0;
 	}
 }
