@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.11
+
+- Same as 0.3.10, built with New to-do and the phone popup. The first 0.3.10 zip was built before them; this number tells the two apart in Setup → Modules.
+
 ## 0.3.10
 
 - The stylesheet is linked again with its file date, so browsers (Safari above all) load the new one after an update instead of a cached copy. Dolibarr itself links module stylesheets with no version.
