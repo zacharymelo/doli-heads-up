@@ -990,4 +990,82 @@
 			saveProgress(slider);
 		}, 600);
 	});
+
+	/* Layout check: add headsup_overflow=1 to any page's address to outline
+	 * whatever sticks out past the right edge of the screen (the thing that
+	 * makes a phone page scroll sideways or zoom out), with a list on top. */
+	function describe(node) {
+		var name = node.tagName.toLowerCase();
+		if (node.id) {
+			name += '#' + node.id;
+		}
+		if (typeof node.className === 'string' && node.className.trim()) {
+			name += '.' + node.className.trim().split(/\s+/).slice(0, 4).join('.');
+		}
+		return name;
+	}
+
+	function clipped(node, vw) {
+		for (var a = node.parentElement; a && a !== document.body; a = a.parentElement) {
+			var ox = getComputedStyle(a).overflowX;
+			if (ox !== 'visible' && a.getBoundingClientRect().right <= vw + 1) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	function overflowReport() {
+		var vw = document.documentElement.clientWidth;
+		var lines = [];
+		var mine = document.querySelector('table.headsup-mine');
+		lines.push('Screen ' + vw + 'px, page ' + document.documentElement.scrollWidth + 'px wide');
+		lines.push('queue.php 0.3.9+: ' + (document.querySelector('#headsup-events') ? (mine ? 'yes' : 'NO (old file)') : 'not this page'));
+		if (mine && vw <= 1000) {
+			var row = mine.querySelector('tr');
+			lines.push('headsup.css 0.3.9+: ' + (row && getComputedStyle(row).display === 'flex' ? 'yes' : 'NO (old or cached)'));
+		}
+		var found = 0;
+		Array.prototype.forEach.call(document.body.querySelectorAll('*'), function (node) {
+			if (found >= 12 || node.closest('.headsup-overflow-panel')) {
+				return;
+			}
+			var r = node.getBoundingClientRect();
+			if (r.width === 0 || r.right <= vw + 1) {
+				return;
+			}
+			var parent = node.parentElement;
+			var pos = getComputedStyle(node).position;
+			// Report where it starts: the parent still fits, or it is pinned to the screen
+			if (pos !== 'fixed' && parent && parent !== document.body && parent.getBoundingClientRect().right > vw + 1) {
+				return;
+			}
+			if (clipped(node, vw)) {
+				return;
+			}
+			found++;
+			node.style.outline = '3px solid #e00';
+			node.style.outlineOffset = '-3px';
+			lines.push(describe(node) + ' — right edge ' + Math.round(r.right) + 'px, ' + Math.round(r.width) + 'px wide' + (pos === 'fixed' ? ', fixed' : ''));
+		});
+		if (!found) {
+			lines.push('Nothing sticks out past the screen edge.');
+		}
+		var panel = el('div', {className: 'headsup-overflow-panel'});
+		panel.style.cssText = 'position:fixed;top:0;left:0;width:' + vw + 'px;box-sizing:border-box;z-index:100010;max-height:45vh;overflow:auto;padding:8px 10px;background:#fffbe6;color:#222;border-bottom:2px solid #e00;font:12px/1.4 monospace;white-space:pre-wrap;word-break:break-all;';
+		panel.textContent = lines.join('\n') + '\n(tap to close)';
+		panel.addEventListener('click', function () {
+			panel.remove();
+		});
+		document.body.appendChild(panel);
+		if (window.console) {
+			console.log('[headsup overflow]\n' + lines.join('\n'));
+		}
+	}
+
+	if (/[?&]headsup_overflow=1(&|$)/.test(window.location.search)) {
+		window.addEventListener('load', function () {
+			setTimeout(overflowReport, 300);
+		});
+	}
 })();
