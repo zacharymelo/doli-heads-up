@@ -411,6 +411,56 @@ html.headsup-picking * {
 		flex-wrap: nowrap;
 		max-width: none;
 	}
+
+	/* Assigned to me: each row as two lines, the ref with its status, date or
+	   amount on the right, then the title wrapping underneath. The section name
+	   stays as the header; the other column headers go. */
+	table.headsup-mine tr {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: baseline;
+	}
+	table.headsup-mine tr.oddeven {
+		padding: 4px 0;
+		border-bottom: 1px solid #ddd;
+	}
+	table.headsup-mine tr > th,
+	table.headsup-mine tr > td {
+		display: block;
+		height: auto;
+		min-width: 0;
+		max-width: none;
+		border: 0;
+		padding: 2px 8px;
+	}
+	table.headsup-mine tr.liste_titre > th:first-child,
+	table.headsup-mine td[colspan] {
+		flex: 1 1 100%;
+	}
+	table.headsup-mine tr.liste_titre > th + th {
+		display: none;
+	}
+	table.headsup-mine td.headsup-mine-ref {
+		flex: 1 1 auto;
+		white-space: normal;
+		overflow-wrap: anywhere;
+	}
+	table.headsup-mine td.headsup-mine-side {
+		flex: 0 0 auto;
+		text-align: right;
+	}
+	table.headsup-mine td.headsup-mine-side:empty {
+		display: none;
+	}
+	table.headsup-mine td.headsup-mine-title {
+		order: 1;
+		flex: 1 1 100%;
+		padding-top: 0;
+		overflow: visible;
+		white-space: normal;
+		text-overflow: clip;
+		overflow-wrap: anywhere;
+	}
 }
 
 /* Touch screens: bigger menu rows, and no Alt+click hint (there is no Alt key) */
