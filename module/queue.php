@@ -360,7 +360,7 @@ if ($view === 'me') {
 	$sql .= " WHERE p.fk_statut = 1 AND p.entity IN (".getEntity('project').")";
 	$sql .= " ORDER BY p.usage_opportunity DESC, p.datec DESC LIMIT 200";
 	$resql = $db->query($sql);
-	print '<table class="noborder centpercent"><tr class="liste_titre"><th colspan="2">'.$langs->trans('HeadsupMyLeads').'</th><th>'.$langs->trans('Status').'</th><th class="right">'.$langs->trans('LastAction').'</th></tr>';
+	print '<div class="div-table-responsive-no-min"><table class="noborder centpercent headsup-mine"><tr class="liste_titre"><th colspan="2">'.$langs->trans('HeadsupMyLeads').'</th><th>'.$langs->trans('Status').'</th><th class="right">'.$langs->trans('LastAction').'</th></tr>';
 	$n = 0;
 	if ($resql) {
 		$p = new Project($db);
@@ -375,16 +375,16 @@ if ($view === 'me') {
 				$status = $langs->trans($k) !== $k ? $langs->trans($k) : $obj->opp_label;
 			}
 			$last = $db->jdate($obj->lastact);
-			print '<tr class="oddeven"><td class="nowrap">'.$p->getNomUrl(1).'</td>';
-			print '<td class="tdoverflowmax200">'.dol_escape_htmltag($obj->title).' <span class="opacitymedium">· '.dol_escape_htmltag($rolelabel('project', $obj->role_code, $obj->role_label)).'</span></td>';
-			print '<td class="nowrap">'.dol_escape_htmltag($status).'</td>';
-			print '<td class="right nowrap">'.($last ? headsup_age($last) : '<span class="opacitymedium">'.$langs->trans('None').'</span>').'</td></tr>';
+			print '<tr class="oddeven"><td class="nowrap headsup-mine-ref">'.$p->getNomUrl(1).'</td>';
+			print '<td class="tdoverflowmax200 headsup-mine-title">'.dol_escape_htmltag($obj->title).' <span class="opacitymedium">· '.dol_escape_htmltag($rolelabel('project', $obj->role_code, $obj->role_label)).'</span></td>';
+			print '<td class="nowrap headsup-mine-side">'.dol_escape_htmltag($status).'</td>';
+			print '<td class="right nowrap headsup-mine-side">'.($last ? headsup_age($last) : '<span class="opacitymedium">'.$langs->trans('None').'</span>').'</td></tr>';
 		}
 	}
 	if (!$n) {
 		print '<tr class="oddeven"><td colspan="4"><span class="opacitymedium">'.$langs->trans('HeadsupNone').'</span></td></tr>';
 	}
-	print '</table><br>';
+	print '</table></div><br>';
 
 	// Tasks
 	$sql = "SELECT t.rowid, t.ref, t.label, t.progress, t.dateo, t.datee, t.fk_projet, tc.code as role_code, tc.libelle as role_label";
@@ -394,7 +394,7 @@ if ($view === 'me') {
 	$sql .= " WHERE (t.progress IS NULL OR t.progress < 100) AND t.entity IN (".getEntity('project').")";
 	$sql .= " ORDER BY t.datee IS NULL, t.datee, t.rowid DESC LIMIT 200";
 	$resql = $db->query($sql);
-	print '<table class="noborder centpercent"><tr class="liste_titre"><th colspan="2">'.$langs->trans('HeadsupMyTasks').'</th><th class="right">'.$langs->trans('DateEnd').'</th></tr>';
+	print '<div class="div-table-responsive-no-min"><table class="noborder centpercent headsup-mine"><tr class="liste_titre"><th colspan="2">'.$langs->trans('HeadsupMyTasks').'</th><th class="right">'.$langs->trans('DateEnd').'</th></tr>';
 	$n = 0;
 	if ($resql) {
 		$t = new Task($db);
@@ -405,15 +405,15 @@ if ($view === 'me') {
 			$t->label = $obj->label;
 			$t->fk_project = $obj->fk_projet;
 			$end = $db->jdate($obj->datee);
-			print '<tr class="oddeven"><td class="nowrap">'.$t->getNomUrl(1, 'withproject').'</td>';
-			print '<td class="tdoverflowmax200">'.dol_escape_htmltag($obj->label).' <span class="opacitymedium">· '.((int) $obj->progress).'%</span></td>';
-			print '<td class="right nowrap'.($end && $end < $now ? ' error' : '').'">'.dol_print_date($end, 'day').'</td></tr>';
+			print '<tr class="oddeven"><td class="nowrap headsup-mine-ref">'.$t->getNomUrl(1, 'withproject').'</td>';
+			print '<td class="tdoverflowmax200 headsup-mine-title">'.dol_escape_htmltag($obj->label).' <span class="opacitymedium">· '.((int) $obj->progress).'%</span></td>';
+			print '<td class="right nowrap headsup-mine-side'.($end && $end < $now ? ' error' : '').'">'.dol_print_date($end, 'day').'</td></tr>';
 		}
 	}
 	if (!$n) {
 		print '<tr class="oddeven"><td colspan="3"><span class="opacitymedium">'.$langs->trans('HeadsupNone').'</span></td></tr>';
 	}
-	print '</table>';
+	print '</table></div>';
 
 	print '</div><div class="fichehalfright">';
 
@@ -426,7 +426,7 @@ if ($view === 'me') {
 		$sql .= " WHERE p.fk_statut = 1 AND p.entity IN (".getEntity('propal').")";
 		$sql .= " ORDER BY p.datep DESC LIMIT 200";
 		$resql = $db->query($sql);
-		print '<table class="noborder centpercent"><tr class="liste_titre"><th colspan="2">'.$langs->trans('HeadsupMyProposals').'</th><th class="right">'.$langs->trans('AmountHT').'</th></tr>';
+		print '<div class="div-table-responsive-no-min"><table class="noborder centpercent headsup-mine"><tr class="liste_titre"><th colspan="2">'.$langs->trans('HeadsupMyProposals').'</th><th class="right">'.$langs->trans('AmountHT').'</th></tr>';
 		$n = 0;
 		if ($resql) {
 			$pr = new Propal($db);
@@ -434,15 +434,15 @@ if ($view === 'me') {
 				$n++;
 				$pr->id = $obj->rowid;
 				$pr->ref = $obj->ref;
-				print '<tr class="oddeven"><td class="nowrap">'.$pr->getNomUrl(1).'</td>';
-				print '<td class="tdoverflowmax200">'.dol_escape_htmltag($obj->socname).'</td>';
-				print '<td class="right nowrap">'.price($obj->total_ht).'</td></tr>';
+				print '<tr class="oddeven"><td class="nowrap headsup-mine-ref">'.$pr->getNomUrl(1).'</td>';
+				print '<td class="tdoverflowmax200 headsup-mine-title">'.dol_escape_htmltag($obj->socname).'</td>';
+				print '<td class="right nowrap headsup-mine-side">'.price($obj->total_ht).'</td></tr>';
 			}
 		}
 		if (!$n) {
 			print '<tr class="oddeven"><td colspan="3"><span class="opacitymedium">'.$langs->trans('HeadsupNone').'</span></td></tr>';
 		}
-		print '</table><br>';
+		print '</table></div><br>';
 	}
 
 	// Orders
@@ -454,7 +454,7 @@ if ($view === 'me') {
 		$sql .= " WHERE c.fk_statut IN (1, 2) AND c.entity IN (".getEntity('commande').")";
 		$sql .= " ORDER BY c.date_commande DESC LIMIT 200";
 		$resql = $db->query($sql);
-		print '<table class="noborder centpercent"><tr class="liste_titre"><th colspan="2">'.$langs->trans('HeadsupMyOrders').'</th><th class="right">'.$langs->trans('AmountHT').'</th></tr>';
+		print '<div class="div-table-responsive-no-min"><table class="noborder centpercent headsup-mine"><tr class="liste_titre"><th colspan="2">'.$langs->trans('HeadsupMyOrders').'</th><th class="right">'.$langs->trans('AmountHT').'</th></tr>';
 		$n = 0;
 		if ($resql) {
 			$co = new Commande($db);
@@ -462,15 +462,15 @@ if ($view === 'me') {
 				$n++;
 				$co->id = $obj->rowid;
 				$co->ref = $obj->ref;
-				print '<tr class="oddeven"><td class="nowrap">'.$co->getNomUrl(1).'</td>';
-				print '<td class="tdoverflowmax200">'.dol_escape_htmltag($obj->socname).'</td>';
-				print '<td class="right nowrap">'.price($obj->total_ht).'</td></tr>';
+				print '<tr class="oddeven"><td class="nowrap headsup-mine-ref">'.$co->getNomUrl(1).'</td>';
+				print '<td class="tdoverflowmax200 headsup-mine-title">'.dol_escape_htmltag($obj->socname).'</td>';
+				print '<td class="right nowrap headsup-mine-side">'.price($obj->total_ht).'</td></tr>';
 			}
 		}
 		if (!$n) {
 			print '<tr class="oddeven"><td colspan="3"><span class="opacitymedium">'.$langs->trans('HeadsupNone').'</span></td></tr>';
 		}
-		print '</table><br>';
+		print '</table></div><br>';
 	}
 
 	// Third parties I'm the sales rep for
@@ -480,7 +480,7 @@ if ($view === 'me') {
 	$sql .= " WHERE sc.fk_user = ".$uid." AND s.status = 1 AND s.entity IN (".getEntity('societe').")";
 	$sql .= " ORDER BY s.nom LIMIT 200";
 	$resql = $db->query($sql);
-	print '<table class="noborder centpercent"><tr class="liste_titre"><th colspan="2">'.$langs->trans('HeadsupMyThirdparties').'</th></tr>';
+	print '<div class="div-table-responsive-no-min"><table class="noborder centpercent headsup-mine"><tr class="liste_titre"><th colspan="2">'.$langs->trans('HeadsupMyThirdparties').'</th></tr>';
 	$n = 0;
 	if ($resql) {
 		$so = new Societe($db);
@@ -490,14 +490,14 @@ if ($view === 'me') {
 			$so->name = $obj->nom;
 			$so->client = $obj->client;
 			$so->fournisseur = $obj->fournisseur;
-			print '<tr class="oddeven"><td class="tdoverflowmax250">'.$so->getNomUrl(1).'</td>';
-			print '<td class="tdoverflowmax150">'.dol_escape_htmltag($obj->town).'</td></tr>';
+			print '<tr class="oddeven"><td class="tdoverflowmax250 headsup-mine-ref">'.$so->getNomUrl(1).'</td>';
+			print '<td class="tdoverflowmax150 headsup-mine-side">'.dol_escape_htmltag($obj->town).'</td></tr>';
 		}
 	}
 	if (!$n) {
 		print '<tr class="oddeven"><td colspan="2"><span class="opacitymedium">'.$langs->trans('HeadsupNone').'</span></td></tr>';
 	}
-	print '</table>';
+	print '</table></div>';
 
 	print '</div></div>';
 	print '<div class="clearboth"></div>';
