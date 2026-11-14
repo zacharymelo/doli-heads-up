@@ -7,6 +7,9 @@
 
 ## 0.3.9
 
+- New **New to-do**, linked to no record or page, for things outside Dolibarr (a call, an email still to come): in the flag icon's menu, as a button on My queue, and as **Heads-up → New to-do** in the left menu (re-enable the module to get the menu entry). `HeadsupOpen()` accepts `standalone: true`.
+- The popup has a close button. On phones it fills the screen with its header and Send/Cancel kept in view, 16px fields, and the back gesture closes it.
+- The pick mode banner has a Cancel button, since touch screens have no Esc key.
 - **Assigned to me** no longer makes My queue wider than a phone screen. Below 1000px each row shows on two lines: the ref with its status, date or amount, then the title underneath. If a single word is still too wide, that table scrolls sideways on its own instead of the whole page.
 
 ## 0.3.8
