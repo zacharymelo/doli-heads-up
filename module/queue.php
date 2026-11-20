@@ -276,7 +276,7 @@ foreach ($events as $ev) {
 	$datep = $db->jdate($ev->datep);
 	$tl = isset($typelabels[$ev->code]) ? $typelabels[$ev->code] : array('fa-flag', $ev->code);
 
-	print '<tr class="oddeven'.($done ? ' headsup-done-row' : '').'" data-id="'.((int) $ev->id).'">';
+	print '<tr class="oddeven'.($done ? ' headsup-done-row' : '').'" id="headsup-'.((int) $ev->id).'" data-id="'.((int) $ev->id).'">';
 	print '<td class="nowrap headsup-col-type">'.img_picto('', $tl[0], 'class="pictofixedwidth"').$langs->trans($tl[1]).'</td>';
 
 	print '<td class="tdoverflowmax500 headsup-col-what">';

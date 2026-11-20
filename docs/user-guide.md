@@ -111,6 +111,17 @@ To reopen a finished to-do, move its slider or picker back on the Completed tab.
 
 ## Browser notifications
 
-When a new flag, problem report or assignment reaches you, the browser shows a notification such as "Heads-up from Sam: …". Clicking it opens My queue.
+When a new flag, problem report or assignment reaches you, the browser shows a notification such as "Heads-up from Sam: …". Clicking or tapping it opens what the to-do is about:
+
+1. the record it is linked to (a product, order, third party…)
+2. else the page it was flagged on
+3. else its project, then its third party
+4. else the to-do itself on My queue, highlighted (a New to-do has none of the above)
+
+### On an iPhone or iPad
+
+Notifications work when Dolibarr is added to the Home Screen (Share → Add to Home Screen, iOS 16.4 or later) and opened from there, not in a Safari tab. Tapping a notification opens the app on the right page, even from the lock screen.
+
+The app checks for new to-dos while it is open or was just in use. iOS suspends Home Screen apps soon after you leave them, so a to-do sent while the app is closed shows the next time you open it.
 
 The browser asks for permission the first time you open the flag menu or the popup. Each to-do is shown once across all your tabs. Background tabs keep checking only after you have allowed notifications.

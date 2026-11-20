@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.12
+
+- Tapping a notification opens what the to-do is about: its record, else the page it was flagged on, else its project or third party, else the to-do on My queue (highlighted). It used to always open My queue.
+- Taps now work on an iPhone Home Screen app, including from the lock screen. Notifications go through a small service worker (`js/headsup-sw.js`), which iOS wakes on a tap. The page-only notifications from before did nothing there. The worker's scope is its own folder, so it does not take over Dolibarr's pages or replace another module's worker.
+- My queue rows have an anchor (`queue.php#headsup-<id>`).
+
 ## 0.3.11
 
 - Same as 0.3.10, built with New to-do and the phone popup. The first 0.3.10 zip was built before them; this number tells the two apart in Setup → Modules.

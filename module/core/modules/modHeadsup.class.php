@@ -44,7 +44,7 @@ class modHeadsup extends DolibarrModules
 
 		$this->name = preg_replace('/^mod/i', '', get_class($this));
 		$this->description = "Alt+click anything to flag it for someone or report a problem; get a to-do when a record is assigned to you";
-		$this->version = '0.3.11';
+		$this->version = '0.3.12';
 		$this->editor_name = 'Zach Melo';
 		$this->editor_url = 'https://zachmelo.com';
 		$this->const_name = 'MAIN_MODULE_'.strtoupper($this->name);

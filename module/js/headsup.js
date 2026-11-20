@@ -785,7 +785,14 @@
 	function askNotifyPermission() {
 		if (('Notification' in window) && Notification.permission === 'default') {
 			try {
-				Notification.requestPermission();
+				var asked = Notification.requestPermission();
+				if (asked && asked.then) {
+					asked.then(function (p) {
+						if (p === 'granted') {
+							swRegistration();
+						}
+					});
+				}
 			} catch (e) { /* old Safari: callback form only; skip */ }
 		}
 	}
@@ -812,19 +819,92 @@
 		if (seen === null || !notifyAllowed()) {
 			return;
 		}
-		try {
-			var n = new Notification('Heads-up' + (latest.from ? ' from ' + latest.from : ''), {
-				body: latest.label || '',
-				tag: 'headsup-' + latest.id
-			});
-			n.onclick = function () {
-				window.focus();
-				if (c.queuePageUrl) {
-					window.location.href = c.queuePageUrl;
+		var title = 'Heads-up' + (latest.from ? ' from ' + latest.from : '');
+		var url = latest.url || c.queuePageUrl || '';
+		var options = {
+			body: latest.label || '',
+			tag: 'headsup-' + latest.id,
+			data: { url: url, fallback: c.queuePageUrl || '' }
+		};
+		/* Through the service worker where there is one: it is woken by a tap even
+		 * when this page is asleep (always the case on an iPhone Home Screen app) */
+		swRegistration().then(function (reg) {
+			if (reg) {
+				return reg.showNotification(title, options);
+			}
+			throw new Error('no service worker');
+		}).catch(function () {
+			try {
+				var n = new Notification(title, options);
+				n.onclick = function () {
+					window.focus();
+					if (url) {
+						window.location.href = url;
+					}
+					n.close();
+				};
+			} catch (e) { /* notifications unavailable here */ }
+		});
+	}
+
+	/* ---------- Service worker, for notification taps ---------- */
+
+	var swPromise = null;
+
+	/* Resolves to an active registration, or null where there is none. Not
+	 * navigator.serviceWorker.ready: the worker's scope is its own folder, so it
+	 * never controls this page and ready would wait forever. */
+	function swRegistration() {
+		var c = cfg();
+		if (swPromise) {
+			return swPromise;
+		}
+		if (!c || !c.swUrl || !('serviceWorker' in navigator) || !window.isSecureContext) {
+			swPromise = Promise.resolve(null);
+			return swPromise;
+		}
+		swPromise = navigator.serviceWorker.register(c.swUrl, { updateViaCache: 'none' })
+			.then(function (reg) {
+				var worker = reg.active || reg.waiting || reg.installing;
+				if (reg.active || !worker) {
+					return reg.active ? reg : null;
 				}
-				n.close();
-			};
-		} catch (e) { /* notifications unavailable here */ }
+				return new Promise(function (resolve) {
+					worker.addEventListener('statechange', function () {
+						if (worker.state === 'activated') {
+							resolve(reg);
+						} else if (worker.state === 'redundant') {
+							resolve(null);
+						}
+					});
+				});
+			})
+			.catch(function () {
+				return null;
+			});
+		return swPromise;
+	}
+
+	/* A tapped notification: the worker sends the address here to follow */
+	if ('serviceWorker' in navigator) {
+		navigator.serviceWorker.addEventListener('message', function (e) {
+			var d = e.data;
+			if (!d || d.headsup !== 'open' || typeof d.url !== 'string') {
+				return;
+			}
+			var target;
+			try {
+				target = new URL(d.url, window.location.href);
+			} catch (err) {
+				return;
+			}
+			if (target.origin === window.location.origin) {
+				window.location.href = target.href;
+			}
+		});
+		try {
+			navigator.serviceWorker.startMessages();
+		} catch (e) { /* older browsers start on their own */ }
 	}
 
 	function refreshCount() {
@@ -851,6 +931,9 @@
 		if (c && c.refresh) {
 			setInterval(refreshCount, c.refresh * 1000);
 			setTimeout(refreshCount, 3000);
+		}
+		if (notifyAllowed()) {
+			swRegistration();
 		}
 	});
 

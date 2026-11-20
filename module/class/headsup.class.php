@@ -681,11 +681,11 @@ class Headsup
 	 * Newest open Heads-up to-do assigned to a user, for the browser notification.
 	 *
 	 * @param int $userid User id
-	 * @return array{id:int,label:string,from:string}|null
+	 * @return array{id:int,label:string,from:string,url:string}|null
 	 */
 	public function latestOpenFor($userid)
 	{
-		$sql = "SELECT a.id, a.label, u.firstname, u.lastname, u.login";
+		$sql = "SELECT a.id, a.label, a.note, a.elementtype, a.fk_element, a.fk_project, a.fk_soc, u.firstname, u.lastname, u.login";
 		$sql .= " FROM ".MAIN_DB_PREFIX."actioncomm as a";
 		$sql .= " INNER JOIN ".MAIN_DB_PREFIX."actioncomm_resources as r ON r.fk_actioncomm = a.id AND r.element_type = 'user'";
 		$sql .= " LEFT JOIN ".MAIN_DB_PREFIX."user as u ON u.rowid = a.fk_user_author";
@@ -698,9 +698,45 @@ class Headsup
 		$resql = $this->db->query($sql);
 		if ($resql && ($obj = $this->db->fetch_object($resql))) {
 			$sendername = trim($obj->firstname.' '.$obj->lastname);
-			return array('id' => (int) $obj->id, 'label' => (string) $obj->label, 'from' => ($sendername !== '' ? $sendername : (string) $obj->login));
+			return array(
+				'id' => (int) $obj->id,
+				'label' => (string) $obj->label,
+				'from' => ($sendername !== '' ? $sendername : (string) $obj->login),
+				'url' => $this->openUrlFor($obj),
+			);
 		}
 		return null;
+	}
+
+	/**
+	 * Where tapping a to-do's notification goes: the record it is about, else the
+	 * page it was flagged on, else its project or third party, else the to-do
+	 * itself on My queue (New to-dos have none of the others).
+	 *
+	 * @param object $row Row with id, note, elementtype, fk_element, fk_project, fk_soc
+	 * @return string     Path inside Dolibarr
+	 */
+	public function openUrlFor($row)
+	{
+		if (!empty($row->elementtype) && !empty($row->fk_element)) {
+			$url = self::recordUrl($this->fetchRecord((string) $row->elementtype, (int) $row->fk_element));
+			if ($url !== '') {
+				return $url;
+			}
+		}
+		$page = self::safePageUrl(self::parseNote(isset($row->note) ? $row->note : '')['page']);
+		if ($page !== '') {
+			return $page;
+		}
+		foreach (array('project' => 'fk_project', 'societe' => 'fk_soc') as $element => $field) {
+			if (!empty($row->$field)) {
+				$url = self::recordUrl($this->fetchRecord($element, (int) $row->$field));
+				if ($url !== '') {
+					return $url;
+				}
+			}
+		}
+		return dol_buildpath('/headsup/queue.php', 1).'#headsup-'.((int) $row->id);
 	}
 
 	/**
