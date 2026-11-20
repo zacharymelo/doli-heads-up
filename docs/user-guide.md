@@ -67,7 +67,7 @@ Assigning yourself creates nothing. An admin can switch assignments off.
 
 ## My queue
 
-Open My queue from **Heads-up → My queue** in the left menu, or from the flag icon in the top bar. The icon's bubble shows how many to-dos you have that are still **To do**. It is hidden at zero and refreshes every minute.
+Open My queue from **Heads-up → My queue** in the left menu, or from the flag icon in the top bar. The icon's bubble shows how many to-dos you have that are still **To do**. It also counts conversations where someone mentioned you and you have not replied yet (see [Mentioning someone](#mentioning-someone)). It is hidden at zero and refreshes every minute.
 
 | Tab | Shows |
 |---|---|
@@ -121,6 +121,19 @@ The people who can read and write there are:
 - its sender
 - anyone who can see everyone's flags
 - anyone allowed to read or edit every event
+- anyone mentioned in it
+
+### Mentioning someone
+
+To bring someone into a conversation, mention them instead of sending a new Heads-up about the same thing. Type **@** in the comment box and pick the person from the list (or type their login, as in `@sam`). In the conversation the mention shows as their name.
+
+A mention waits for an answer:
+
+- it counts in the mentioned person's top bar bubble
+- the to-do shows at the top of their My queue with **Sam mentioned you**, even when it is not assigned to them
+- they get a browser notification, "Heads-up: Sam mentioned you"
+
+It stops waiting once they comment back, or once the to-do is done. Mentioning someone does not assign the to-do to them: they can read the conversation and reply, but only the people listed under [To do, acknowledged, in progress, done](#to-do-acknowledged-in-progress-done) can change its state.
 
 You can delete your own comments (the bin next to the date). An administrator can delete anyone's. Deleting the to-do deletes its conversation.
 

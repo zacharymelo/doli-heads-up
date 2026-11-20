@@ -47,19 +47,21 @@ if (!isModEnabled('headsup')) {
 	accessforbidden();
 }
 
-// Security check: the event's own rules, then who may see this to-do
-$socid = $user->socid > 0 ? $user->socid : 0;
-restrictedArea($user, 'agenda', $id, 'actioncomm&societe', 'myactions|allactions', 'fk_soc', 'id');
-
+// Security check: an internal user, a Heads-up to-do of this entity, and someone who may see it.
+// No Agenda permission is asked for, as on My queue: a to-do reaches people who have none.
 $object = new ActionComm($db);
-if ($id <= 0 || $object->fetch($id) <= 0 || !in_array($object->code, Headsup::codes(), true)) {
+if ($user->socid > 0 || $id <= 0 || $object->fetch($id) <= 0 || !in_array($object->code, Headsup::codes(), true)) {
 	accessforbidden();
 }
-if ($socid > 0 || !Headsup::canComment($user, $object)) {
+if (!in_array((string) $object->entity, explode(',', getEntity('agenda')), true)) {
+	accessforbidden();
+}
+$hu = new Headsup($db);
+// Someone mentioned in the conversation may read and join it too
+if (!Headsup::canComment($user, $object) && !$hu->isMentioned($user, (int) $object->id)) {
 	accessforbidden();
 }
 
-$hu = new Headsup($db);
 $pageurl = $_SERVER['PHP_SELF'].'?id='.((int) $object->id);
 
 
@@ -116,6 +118,7 @@ if ($action === 'deletecomment') {
 }
 
 $comments = $hu->fetchComments((int) $object->id);
+$mentioned = $hu->mentionedUsers(array_column($comments, 'text'));
 
 print '<div class="headsup-thread">';
 
@@ -142,7 +145,7 @@ foreach ($comments as $comment) {
 		print ' <a class="headsup-comment-delete" href="'.dolPrintHTMLForAttributeUrl($deleteurl).'" title="'.dolPrintHTMLForAttribute($langs->transnoentitiesnoconv('HeadsupDeleteComment')).'">'.img_picto('', 'delete').'</a>';
 	}
 	print '</div>';
-	print '<div class="headsup-comment-body">'.dolPrintHTML($comment['text']).'</div>';
+	print '<div class="headsup-comment-body">'.Headsup::formatMentions(dolPrintHTML($comment['text']), $mentioned).'</div>';
 	print '</div>';
 }
 
@@ -150,13 +153,23 @@ if (!$comments) {
 	print '<div class="headsup-thread-empty opacitymedium">'.$langs->trans('HeadsupNoComments').'</div>';
 }
 
-print '<form method="POST" action="'.dolPrintHTMLForAttributeUrl($pageurl).'" class="headsup-comment-form">';
+// Everyone who can be mentioned, for the list headsup.js shows after an @
+// (dol_escape_htmltag: dolPrintHTMLForAttribute would encode the JSON's quotes twice)
+$mentionable = array();
+foreach ($hu->activeUsers() as $activeuser) {
+	if ($activeuser['id'] !== (int) $user->id) {
+		$mentionable[] = array('login' => $activeuser['login'], 'name' => $activeuser['name']);
+	}
+}
+
+print '<form method="POST" action="'.dolPrintHTMLForAttributeUrl($pageurl).'" class="headsup-comment-form" data-users="'.dol_escape_htmltag((string) json_encode($mentionable)).'">';
 print '<input type="hidden" name="token" value="'.newToken().'">';
 print '<input type="hidden" name="action" value="addcomment">';
 print '<textarea name="comment" class="flat" rows="3" maxlength="'.Headsup::COMMENT_MAX.'" required';
 print ' placeholder="'.dolPrintHTMLForAttribute($langs->transnoentitiesnoconv('HeadsupWriteComment')).'"';
 print ' aria-label="'.dolPrintHTMLForAttribute($langs->transnoentitiesnoconv('HeadsupWriteComment')).'"></textarea>';
-print '<div><input type="submit" class="button" value="'.dolPrintHTMLForAttribute($langs->transnoentitiesnoconv('HeadsupSendComment')).'"></div>';
+print '<div><input type="submit" class="button" value="'.dolPrintHTMLForAttribute($langs->transnoentitiesnoconv('HeadsupSendComment')).'">';
+print ' <span class="opacitymedium headsup-mention-hint">'.$langs->trans('HeadsupMentionHint').'</span></div>';
 print '</form>';
 
 print '</div>';

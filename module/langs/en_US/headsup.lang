@@ -107,3 +107,5 @@ HeadsupSendComment = Send
 HeadsupDeleteComment = Delete comment
 HeadsupDeleteCommentConfirm = Delete this comment? It cannot be brought back.
 HeadsupCommentDeleted = Comment deleted
+HeadsupMentionedYou = %s mentioned you
+HeadsupMentionHint = Type @ to mention someone. It stays in their queue until they reply.

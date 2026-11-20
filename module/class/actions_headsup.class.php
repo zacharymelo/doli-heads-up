@@ -58,7 +58,7 @@ class ActionsHeadsup
 
 		dol_include_once('/headsup/class/headsup.class.php');
 		$hu = new Headsup($this->db);
-		$count = $hu->countOpenFor($user->id);
+		$count = $hu->countWaitingFor($user);
 
 		// One icon, built like core's own top bar icons (print, help) so it lines up with them,
 		// with the open count in a bubble. Clicking it opens a small menu: pick mode, or the queue.

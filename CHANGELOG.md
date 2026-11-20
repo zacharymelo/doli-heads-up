@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.13
+
+- **Mentions** in a to-do's conversation, so nobody has to send a Heads-up about a Heads-up: type **@** in the comment box and pick someone (or type `@login`). Their name is highlighted in the comment.
+- A mention waits for an answer: it counts in the mentioned person's top bar bubble and puts the to-do at the top of their My queue with **Sam mentioned you**, until they comment back or the to-do is done. They also get a browser notification that opens the comment.
+- Someone mentioned can read and join that conversation even when the to-do is not theirs. The to-do is not assigned to them, and they cannot change its state.
+- The Conversation page no longer asks for an Agenda permission, like My queue.
+
 ## 0.3.12
 
 - New **Conversation** tab on a to-do's event card, for comments back and forth: the to-do first, then the comments oldest first, yours on the right, and a box to write one. The tab shows the number of comments. Comments are plain text; you can delete your own, an administrator anyone's.

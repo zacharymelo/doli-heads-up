@@ -173,4 +173,4 @@ if ($id <= 0) {
 	headsup_reply(500, array('ok' => 0, 'error' => $hu->error ? $hu->error : 'Could not save'));
 }
 
-headsup_reply(200, array('ok' => 1, 'id' => $id, 'count' => $hu->countOpenFor($user->id)));
+headsup_reply(200, array('ok' => 1, 'id' => $id, 'count' => $hu->countWaitingFor($user)));

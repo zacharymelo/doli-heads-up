@@ -49,10 +49,20 @@ The browser sends the `href`s it sees. `Headsup::parseRecordUrl()` matches them 
 
 A to-do's comments are rows of core's `llx_comment`, the table project task comments use, with `element_type = 'action'` and `fk_element` = the event id. They are written through core's `Comment` class, without its triggers (`TASK_COMMENT_CREATE` and `TASK_COMMENT_DELETE` are about tasks). Comments are plain text.
 
-- `Headsup::canComment()` decides who may read and write: whoever may change the state, plus anyone allowed to read every event.
+- `Headsup::canComment()` decides who may read and write: whoever may change the state, plus anyone allowed to read every event. `comments.php` also lets in anyone mentioned in the conversation (`Headsup::isMentioned()`), and asks for no Agenda permission, like My queue.
 - The **Conversation** tab is added by the `completeTabsHead` hook, so it shows on Heads-up to-dos only and not on other events.
 - The `ACTION_DELETE` trigger deletes a to-do's comments with it.
 - `ajax/queue.php` also returns `latestComment`: the newest comment by someone else on a to-do the user sent or is assigned to. `headsup.js` shows it once as a browser notification.
+
+### Mentions
+
+A mention is `@login` in a comment's text. Nothing else is stored: who is mentioned, and whether it still waits, is read from the comments.
+
+- `Headsup::openMentionsFor()` returns the mentions of a user that still wait: on a to-do that is not done, written by someone else, with no later comment by that user. SQL narrows with `LIKE '%@login%'`, then `Headsup::textMentions()` checks the whole login, so `@sam` is not found in `@samuel` or `@sam.smith`.
+- `Headsup::countWaitingFor()` is the top bar number: `countOpenFor()` plus the to-dos with a waiting mention that it does not already count.
+- My queue adds those to-dos to **For me**, with the status controls only for people who may change the state.
+- `latestComment` in `ajax/queue.php` is the waiting mention when it is the newest, with `mention: 1`.
+- `comments.php` passes the active users in the form's `data-users`; `headsup.js` (`initMentions`) lists them after an `@`. `Headsup::formatMentions()` shows each `@login` as the person's name.
 
 ## Assignments
 

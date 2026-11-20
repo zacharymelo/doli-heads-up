@@ -81,8 +81,17 @@ if ($postaction === 'done' || $postaction === 'status' || $postaction === 'progr
 		print json_encode(array('ok' => 0, 'error' => $hu->error));
 		exit;
 	}
-	print json_encode(array('ok' => 1, 'status' => Headsup::statusOf($ac->percentage), 'percent' => (int) $ac->percentage, 'count' => $hu->countOpenFor($user->id)));
+	print json_encode(array('ok' => 1, 'status' => Headsup::statusOf($ac->percentage), 'percent' => (int) $ac->percentage, 'count' => $hu->countWaitingFor($user)));
 	exit;
 }
 
-print json_encode(array('ok' => 1, 'count' => $hu->countOpenFor($user->id), 'latest' => $hu->latestOpenFor($user->id), 'latestComment' => $hu->latestCommentFor($user->id)));
+// Newest comment to tell them about: one on their own to-dos, or one that mentions them
+$latestcomment = $hu->latestCommentFor($user->id);
+foreach ($hu->openMentionsFor($user) as $mention) {
+	if (!$latestcomment || $mention['id'] >= $latestcomment['id']) {
+		$latestcomment = $mention;
+	}
+	break;
+}
+
+print json_encode(array('ok' => 1, 'count' => $hu->countWaitingFor($user), 'latest' => $hu->latestOpenFor($user->id), 'latestComment' => $latestcomment));

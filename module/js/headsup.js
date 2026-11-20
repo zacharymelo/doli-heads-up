@@ -849,14 +849,15 @@
 			return;
 		}
 		try {
-			var n = new Notification('Heads-up: ' + (latest.from ? latest.from + ' commented' : 'new comment'), {
+			var what = latest.mention ? ' mentioned you' : ' commented';
+			var n = new Notification('Heads-up: ' + (latest.from ? latest.from + what : 'new comment'), {
 				body: latest.label || '',
 				tag: 'headsup-comment-' + latest.id
 			});
 			n.onclick = function () {
 				window.focus();
 				if (c.commentsPageUrl && latest.todo) {
-					window.location.href = c.commentsPageUrl + '?id=' + encodeURIComponent(latest.todo);
+					window.location.href = c.commentsPageUrl + '?id=' + encodeURIComponent(latest.todo) + '#headsup-comment-' + encodeURIComponent(latest.id);
 				}
 				n.close();
 			};
@@ -890,6 +891,118 @@
 			setTimeout(refreshCount, 3000);
 		}
 	});
+
+	/* ---------- Mentions in a to-do's conversation ---------- */
+
+	/* Typing @ in the comment box lists the people who can be mentioned (the page
+	 * passes them in data-users); picking one writes "@login". Arrows and Enter or
+	 * Tab pick, Esc closes. */
+	function initMentions() {
+		var form = document.querySelector('.headsup-comment-form');
+		var box = form ? form.querySelector('textarea') : null;
+		if (!form || !box) {
+			return;
+		}
+		var users = [];
+		try {
+			users = JSON.parse(form.getAttribute('data-users') || '[]');
+		} catch (e) {
+			users = [];
+		}
+		if (!users.length) {
+			return;
+		}
+		var list = document.createElement('ul');
+		list.className = 'headsup-mention-list';
+		list.setAttribute('role', 'listbox');
+		list.hidden = true;
+		form.appendChild(list);
+		var shown = [];
+		var active = 0;
+		var start = -1;	/* where the @ being typed is */
+
+		function close() {
+			list.hidden = true;
+			shown = [];
+			start = -1;
+		}
+
+		function pick(i) {
+			var u = shown[i];
+			if (!u || start < 0) {
+				return;
+			}
+			var caret = box.selectionStart;
+			var text = box.value;
+			box.value = text.slice(0, start) + '@' + u.login + ' ' + text.slice(caret);
+			var pos = start + u.login.length + 2;
+			close();
+			box.focus();
+			box.setSelectionRange(pos, pos);
+		}
+
+		function render() {
+			list.textContent = '';
+			shown.forEach(function (u, i) {
+				var li = document.createElement('li');
+				li.setAttribute('role', 'option');
+				li.className = i === active ? 'headsup-mention-active' : '';
+				li.textContent = u.name;
+				var login = document.createElement('span');
+				login.textContent = '@' + u.login;
+				li.appendChild(login);
+				/* mousedown, so the box keeps the focus and the caret */
+				li.addEventListener('mousedown', function (e) {
+					e.preventDefault();
+					pick(i);
+				});
+				list.appendChild(li);
+			});
+			list.style.top = (box.offsetTop + box.offsetHeight) + 'px';
+			list.style.left = box.offsetLeft + 'px';
+			list.hidden = !shown.length;
+		}
+
+		function update() {
+			var before = box.value.slice(0, box.selectionStart);
+			var m = /(^|[\s(])@([A-Za-z0-9_.\-]*)$/.exec(before);
+			if (!m) {
+				close();
+				return;
+			}
+			var q = m[2].toLowerCase();
+			start = before.length - m[2].length - 1;
+			shown = users.filter(function (u) {
+				return String(u.login).toLowerCase().indexOf(q) === 0 || String(u.name).toLowerCase().indexOf(q) >= 0;
+			}).slice(0, 8);
+			active = 0;
+			render();
+		}
+
+		box.addEventListener('input', update);
+		box.addEventListener('click', update);
+		box.addEventListener('blur', function () {
+			setTimeout(close, 150);
+		});
+		box.addEventListener('keydown', function (e) {
+			if (list.hidden || !shown.length) {
+				return;
+			}
+			if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+				e.preventDefault();
+				active = (active + (e.key === 'ArrowDown' ? 1 : shown.length - 1)) % shown.length;
+				render();
+			} else if (e.key === 'Enter' || e.key === 'Tab') {
+				e.preventDefault();
+				pick(active);
+			} else if (e.key === 'Escape') {
+				e.preventDefault();
+				close();
+			}
+		});
+	}
+
+	document.addEventListener('DOMContentLoaded', initMentions);
 
 	/* Opens the popup from another module, already filled in. Every field is optional:
 	 *   x, y         where to show it (viewport pixels; default: near the top right)

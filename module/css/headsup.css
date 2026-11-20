@@ -338,6 +338,51 @@ html.headsup-picking * {
 .headsup-comment:target {
 	box-shadow: 0 0 0 2px rgba(38, 120, 220, 0.45);
 }
+/* "@login" shown as the person's name */
+.headsup-mention {
+	padding: 0 3px;
+	border-radius: 3px;
+	background: rgba(38, 120, 220, 0.18);
+	font-weight: bold;
+	white-space: nowrap;
+}
+/* My queue: a mention waiting for my reply */
+.headsup-note.headsup-mentioned a {
+	color: #b3261e;
+	font-weight: bold;
+}
+/* The people offered after an @ in the comment box */
+.headsup-mention-list {
+	position: absolute;
+	z-index: 1000;
+	min-width: 200px;
+	max-width: 90vw;
+	margin: 0;
+	padding: 4px 0;
+	list-style: none;
+	border: 1px solid rgba(128, 128, 128, 0.5);
+	border-radius: 6px;
+	background: var(--colorbackbody, #fff);
+	color: var(--colortext, #222);
+	box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+}
+.headsup-mention-list li {
+	padding: 8px 12px;
+	cursor: pointer;
+}
+.headsup-mention-list li.headsup-mention-active {
+	background: rgba(38, 120, 220, 0.18);
+}
+.headsup-mention-list li span {
+	margin-left: 6px;
+	opacity: 0.6;
+}
+.headsup-comment-form {
+	position: relative;
+}
+.headsup-mention-hint {
+	font-size: 0.9em;
+}
 .headsup-thread-empty {
 	margin: 4px 0 12px;
 }

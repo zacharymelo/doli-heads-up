@@ -39,6 +39,9 @@ class Headsup
 	/** @var string[] */
 	public $errors = array();
 
+	/** @var array<int,array<int,array{id:int,todo:int,label:string,from:string,mention:int}>> openMentionsFor() results, by user id */
+	private $openmentions = array();
+
 	/**
 	 * @param DoliDB $db Database handler
 	 */
@@ -896,6 +899,189 @@ class Headsup
 			return array('id' => (int) $obj->rowid, 'todo' => (int) $obj->id, 'label' => (string) $obj->label, 'from' => ($sendername !== '' ? $sendername : (string) $obj->login));
 		}
 		return null;
+	}
+
+	/**
+	 * Pattern finding "@login" in a comment: after a space or the start, and not
+	 * as the beginning of a longer login ("@sam" is not found in "@sam.smith").
+	 *
+	 * @param string $login User login
+	 * @return string       Regular expression
+	 */
+	private static function mentionPattern($login)
+	{
+		return '/(^|[\s(>;,])@'.preg_quote($login, '/').'(?![A-Za-z0-9_\-]|\.[A-Za-z0-9])/i';
+	}
+
+	/**
+	 * Whether a comment mentions a user ("@login").
+	 *
+	 * @param string $text  Comment
+	 * @param string $login User login
+	 * @return bool
+	 */
+	public static function textMentions($text, $login)
+	{
+		return $login !== '' && preg_match(self::mentionPattern($login), (string) $text) === 1;
+	}
+
+	/**
+	 * The active users mentioned in some comments, in one query.
+	 *
+	 * @param string[] $texts Comments
+	 * @return array<string,array{id:int,name:string}> Login => user
+	 */
+	public function mentionedUsers($texts)
+	{
+		$out = array();
+		$logins = array();
+		foreach ($texts as $text) {
+			$m = array();
+			if (preg_match_all('/(?:^|[\s(>;,])@([A-Za-z0-9_.\-]+)/', (string) $text, $m)) {
+				foreach ($m[1] as $word) {
+					// "@sam." at the end of a sentence is sam
+					$logins[$word] = "'".$this->db->escape($word)."'";
+					$logins[rtrim($word, '.-')] = "'".$this->db->escape(rtrim($word, '.-'))."'";
+				}
+			}
+		}
+		unset($logins['']);
+		if (!$logins) {
+			return $out;
+		}
+		$sql = "SELECT u.rowid, u.login, u.firstname, u.lastname";
+		$sql .= " FROM ".MAIN_DB_PREFIX."user as u";
+		$sql .= " WHERE u.statut = 1";
+		$sql .= " AND u.entity IN (".getEntity('user').")";
+		$sql .= " AND u.login IN (".$this->db->sanitize(implode(',', $logins), 1).")";
+		$resql = $this->db->query($sql);
+		if ($resql) {
+			while ($obj = $this->db->fetch_object($resql)) {
+				$name = trim($obj->firstname.' '.$obj->lastname);
+				$out[(string) $obj->login] = array('id' => (int) $obj->rowid, 'name' => ($name !== '' ? $name : (string) $obj->login));
+			}
+		}
+		return $out;
+	}
+
+	/**
+	 * Show each "@login" of a comment as the person's name.
+	 *
+	 * @param string                                  $html  Comment, already escaped for output
+	 * @param array<string,array{id:int,name:string}> $users Login => user, from mentionedUsers()
+	 * @return string                                        HTML
+	 */
+	public static function formatMentions($html, $users)
+	{
+		foreach ($users as $login => $mentioned) {
+			$name = str_replace(array('\\', '$'), array('\\\\', '\\$'), dol_escape_htmltag($mentioned['name']));
+			$html = (string) preg_replace(self::mentionPattern((string) $login), '$1<span class="headsup-mention">@'.$name.'</span>', $html);
+		}
+		return $html;
+	}
+
+	/**
+	 * Mentions of a user still waiting for them: on a to-do that is not done,
+	 * written by someone else, with no comment of theirs after it.
+	 *
+	 * @param User $user User
+	 * @return array<int,array{id:int,todo:int,label:string,from:string,mention:int}> To-do id => its newest such mention
+	 */
+	public function openMentionsFor($user)
+	{
+		$uid = (int) $user->id;
+		if (isset($this->openmentions[$uid])) {
+			return $this->openmentions[$uid];
+		}
+		$out = array();
+		$login = (string) $user->login;
+		if ($login !== '') {
+			$sql = "SELECT c.rowid, c.description, a.id, a.label, u.firstname, u.lastname, u.login";
+			$sql .= " FROM ".MAIN_DB_PREFIX."comment as c";
+			$sql .= " INNER JOIN ".MAIN_DB_PREFIX."actioncomm as a ON a.id = c.fk_element";
+			$sql .= " LEFT JOIN ".MAIN_DB_PREFIX."user as u ON u.rowid = c.fk_user_author";
+			$sql .= " WHERE c.element_type = '".$this->db->escape(self::COMMENT_ELEMENT)."'";
+			$sql .= " AND c.fk_user_author <> ".((int) $uid);
+			$sql .= " AND c.description LIKE '".$this->db->escape('%@'.$this->db->escapeforlike($login).'%')."'";
+			$sql .= " AND a.code IN (".self::codesSql().")";
+			$sql .= " AND a.entity IN (".getEntity('agenda').")";
+			$sql .= " AND a.percent >= 0 AND a.percent < 100";
+			$sql .= " AND NOT EXISTS (SELECT c2.rowid FROM ".MAIN_DB_PREFIX."comment as c2";
+			$sql .= " WHERE c2.element_type = c.element_type AND c2.fk_element = c.fk_element";
+			$sql .= " AND c2.fk_user_author = ".((int) $uid)." AND c2.rowid > c.rowid)";
+			$sql .= " ORDER BY c.rowid DESC";
+			$sql .= $this->db->plimit(200);
+			$resql = $this->db->query($sql);
+			if ($resql) {
+				while ($obj = $this->db->fetch_object($resql)) {
+					// LIKE also finds "@sam" in "@samuel": check the whole login
+					if (isset($out[(int) $obj->id]) || !self::textMentions($obj->description, $login)) {
+						continue;
+					}
+					$sendername = trim($obj->firstname.' '.$obj->lastname);
+					$out[(int) $obj->id] = array('id' => (int) $obj->rowid, 'todo' => (int) $obj->id, 'label' => (string) $obj->label, 'from' => ($sendername !== '' ? $sendername : (string) $obj->login), 'mention' => 1);
+				}
+			}
+		}
+		$this->openmentions[$uid] = $out;
+		return $out;
+	}
+
+	/**
+	 * Whether a user was ever mentioned in a to-do's conversation, which lets them read and join it.
+	 *
+	 * @param User $user User
+	 * @param int  $id   Event id
+	 * @return bool
+	 */
+	public function isMentioned($user, $id)
+	{
+		$login = (string) $user->login;
+		if ($login === '') {
+			return false;
+		}
+		$sql = "SELECT c.description FROM ".MAIN_DB_PREFIX."comment as c";
+		$sql .= " WHERE c.element_type = '".$this->db->escape(self::COMMENT_ELEMENT)."'";
+		$sql .= " AND c.fk_element = ".((int) $id);
+		$sql .= " AND c.description LIKE '".$this->db->escape('%@'.$this->db->escapeforlike($login).'%')."'";
+		$resql = $this->db->query($sql);
+		if ($resql) {
+			while ($obj = $this->db->fetch_object($resql)) {
+				if (self::textMentions($obj->description, $login)) {
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * The number in the top bar bubble: to-dos waiting for a user (countOpenFor),
+	 * plus the other to-dos where a mention of them waits for a reply.
+	 *
+	 * @param User $user User
+	 * @return int
+	 */
+	public function countWaitingFor($user)
+	{
+		$count = $this->countOpenFor((int) $user->id);
+		$mentions = $this->openMentionsFor($user);
+		if (!$mentions) {
+			return $count;
+		}
+		// Those already counted: assigned to them and still at to do
+		$counted = 0;
+		$sql = "SELECT COUNT(DISTINCT a.id) as nb";
+		$sql .= " FROM ".MAIN_DB_PREFIX."actioncomm as a";
+		$sql .= " INNER JOIN ".MAIN_DB_PREFIX."actioncomm_resources as r ON r.fk_actioncomm = a.id AND r.element_type = 'user'";
+		$sql .= " WHERE r.fk_element = ".((int) $user->id);
+		$sql .= " AND a.percent = 0";
+		$sql .= " AND a.id IN (".$this->db->sanitize(implode(',', array_keys($mentions))).")";
+		$resql = $this->db->query($sql);
+		if ($resql && ($obj = $this->db->fetch_object($resql))) {
+			$counted = (int) $obj->nb;
+		}
+		return $count + count($mentions) - $counted;
 	}
 
 	/**

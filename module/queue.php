@@ -189,6 +189,34 @@ if ($resql) {
 	dol_print_error($db);
 }
 
+// Mentions of me still waiting for a reply: in My queue even when the to-do is not mine
+$mentions = ($view === 'me') ? $hu->openMentionsFor($user) : array();
+$mentiononly = array();
+$missing = array_diff(array_keys($mentions), array_keys($events));
+if ($missing) {
+	$sql = "SELECT a.id, a.code, a.label, a.note, a.datep, a.tms, a.percent, a.fk_user_author,";
+	$sql .= " a.fk_soc, a.fk_project, a.elementtype, a.fk_element,";
+	$sql .= " ua.firstname as a_firstname, ua.lastname as a_lastname, ua.login as a_login,";
+	$sql .= " um.firstname as m_firstname, um.lastname as m_lastname, um.login as m_login";
+	$sql .= " FROM ".MAIN_DB_PREFIX."actioncomm as a";
+	$sql .= " LEFT JOIN ".MAIN_DB_PREFIX."user as ua ON ua.rowid = a.fk_user_author";
+	$sql .= " LEFT JOIN ".MAIN_DB_PREFIX."user as um ON um.rowid = a.fk_user_mod";
+	$sql .= " WHERE a.id IN (".$db->sanitize(implode(',', $missing)).")";
+	$sql .= " AND a.entity IN (".getEntity('agenda').")";
+	$sql .= " ORDER BY a.datep DESC";
+	$resql = $db->query($sql);
+	if ($resql) {
+		$mentionevents = array();
+		while ($obj = $db->fetch_object($resql)) {
+			$mentionevents[(int) $obj->id] = $obj;
+			$mentiononly[(int) $obj->id] = true;
+		}
+		$events = $mentionevents + $events;
+	}
+}
+// On someone else's to-do, only its sender or a supervisor may change the state
+$cansetothers = $user->hasRight('headsup', 'readall') || $user->hasRight('agenda', 'allactions', 'create');
+
 // Who each one is assigned to (for "sent" and "all")
 $assignees = array();
 if ($events && $view !== 'me') {
@@ -295,6 +323,11 @@ foreach ($events as $ev) {
 		}
 		print '</div>';
 	}
+	if (isset($mentions[(int) $ev->id])) {
+		$mentionurl = $commentsurl.((int) $ev->id).'#headsup-comment-'.$mentions[(int) $ev->id]['id'];
+		print '<div class="headsup-note headsup-mentioned"><a href="'.dolPrintHTMLForAttributeUrl($mentionurl).'">'.img_picto('', 'fa-at', 'class="pictofixedwidth"');
+		print $langs->trans('HeadsupMentionedYou', dolPrintLabel($mentions[(int) $ev->id]['from'])).'</a></div>';
+	}
 	// Its conversation: the number of comments, or an invitation to start one
 	$nbcomments = isset($commentcounts[(int) $ev->id]) ? $commentcounts[(int) $ev->id] : 0;
 	print '<div class="headsup-note"><a class="headsup-discuss" href="'.dolPrintHTMLForAttributeUrl($commentsurl.((int) $ev->id)).'">'.img_picto('', 'fa-comments', 'class="pictofixedwidth"');
@@ -332,10 +365,15 @@ foreach ($events as $ev) {
 	print '<td class="right headsup-col-status"><div class="headsup-status-stack">';
 	$current = Headsup::statusOf($ev->percent);
 	$moreparam = 'data-id="'.((int) $ev->id).'" data-status="'.dol_escape_htmltag($current).'" aria-label="'.dolPrintHTMLForAttribute($langs->transnoentitiesnoconv('HeadsupStatusOf')).'"';
-	if ($statuscontrol !== 'picker') {
+	// Mentioned on a to-do that is not theirs: they can reply, not move it
+	$replyonly = isset($mentiononly[(int) $ev->id]) && !$cansetothers && (int) $ev->fk_user_author !== (int) $user->id;
+	if ($replyonly) {
+		print '<span class="opacitymedium">'.dolPrintLabel($statusoptions[$current]).'</span>';
+	}
+	if (!$replyonly && $statuscontrol !== 'picker') {
 		print Headsup::progressSliderHtml((int) $ev->id, (int) $ev->percent, $langs);
 	}
-	if ($statuscontrol !== 'slider') {
+	if (!$replyonly && $statuscontrol !== 'slider') {
 		print Form::selectarray('headsupstatus'.((int) $ev->id), $statusoptions, $current, 0, 0, 0, $moreparam, 0, 0, 0, '', 'flat headsup-status-select', 0);
 	}
 	print '</div>';
