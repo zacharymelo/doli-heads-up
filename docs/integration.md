@@ -168,7 +168,7 @@ These are used by `headsup.js`. They answer in JSON and need a logged-in session
 | Endpoint | Method | Purpose |
 |---|---|---|
 | `ajax/flag.php` | POST | Save a flag (`kind=todo`) or problem report (`kind=problem`). Fields: `users[]`, `title`, `description`, `page`, `box`, `clicked`, `element`, `elementid`, `clickedelement`, `clickedid`, `project`, `confirm` |
-| `ajax/queue.php` | GET | `{count, latest}` for the top bar and notifications. `latest` is `{id, label, from, url}`; `url` is where tapping the notification goes |
+| `ajax/queue.php` | GET | `{count, latest}` for the top bar and notifications |
 | `ajax/queue.php` | POST | `action=status` with `status` (`todo`, `ack`, `progress`, `done`), `action=progress` with `percent`, or `action=done`; each also takes `id` |
 | `ajax/users.php` | GET | The active users for "Assign to" |
 | `ajax/resolve.php` | GET | Which record a list of `links[]` points to |

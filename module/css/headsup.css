@@ -297,19 +297,6 @@ html.headsup-picking * {
 	opacity: 0.55;
 }
 
-/* The to-do a notification pointed at (queue.php#headsup-123) */
-#headsup-events tr[data-id] {
-	scroll-margin-top: 80px;
-}
-#headsup-events tr[data-id]:target {
-	animation: headsup-target 2.5s ease-out;
-}
-@keyframes headsup-target {
-	from {
-		background: #fff3b0;
-	}
-}
-
 /* Completed tab: finished rows at full strength; one reopened here fades until the page reloads */
 #headsup-events.headsup-completed tr.headsup-done-row {
 	opacity: 1;

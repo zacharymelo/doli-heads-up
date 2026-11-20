@@ -247,12 +247,6 @@ class ActionsHeadsup
 			'record' => $record,
 			'statusLabels' => $statuslabels,
 		);
-		// Service worker for notification taps (see js/headsup-sw.js); its date in
-		// the address makes browsers pick up a new version
-		$swfile = dol_buildpath('/headsup/js/headsup-sw.js', 0);
-		if ($swfile && is_file($swfile)) {
-			$config['swUrl'] = dol_buildpath('/headsup/js/headsup-sw.js', 1).'?v='.filemtime($swfile);
-		}
 
 		$this->resprints = '<script nonce="'.getNonce().'">window.HEADSUP = '.json_encode($config, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT).';</script>'."\n";
 

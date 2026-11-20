@@ -85,7 +85,6 @@ module/
 │   └── triggers/interface_99_modHeadsup_HeadsupTrigger.class.php   Assignment to-dos
 ├── css/headsup.css                      Popup, queue, slider, cards on small screens
 ├── js/headsup.js                        Alt+click, pick mode, popup, notifications, queue controls
-├── js/headsup-sw.js                     Service worker: opens the right page when a notification is tapped
 ├── langs/en_US/headsup.lang             Translations
 └── queue.php                            My queue page and its tabs
 ```
