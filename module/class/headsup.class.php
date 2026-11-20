@@ -24,6 +24,12 @@ class Headsup
 	const CODE_PROBLEM = 'AC_HU_PROBLEM';
 	const CODE_ASSIGN = 'AC_HU_ASSIGN';
 
+	/** Element type of a to-do's comments in core's comment table (ActionComm's element). */
+	const COMMENT_ELEMENT = 'action';
+
+	/** Longest comment kept, in characters. */
+	const COMMENT_MAX = 5000;
+
 	/** @var DoliDB */
 	public $db;
 
@@ -501,7 +507,7 @@ class Headsup
 				$element .= '@'.$mod;
 			}
 			$ac->elementtype = $element;
-			$ac->fk_element = (int) $object->id;
+			$ac->elementid = (int) $object->id;
 		}
 	}
 
@@ -573,8 +579,9 @@ class Headsup
 			}
 		}
 		$path = $parts['path'];
+		// DOL_URL_ROOT is '' or '/subfolder'; with '' this takes nothing off
 		$root = (string) DOL_URL_ROOT;
-		if ($root !== '' && $root !== '/' && strpos($path, $root) === 0) {
+		if (strpos($path, $root.'/') === 0) {
 			$path = substr($path, strlen($root));
 		}
 		$query = array();
@@ -704,6 +711,194 @@ class Headsup
 	}
 
 	/**
+	 * Whether a user may read and join a to-do's conversation: anyone who may
+	 * change its state, or who may read every event.
+	 *
+	 * @param User       $user User
+	 * @param ActionComm $ac   Event (fetched with its assignees)
+	 * @return bool
+	 */
+	public static function canComment($user, $ac)
+	{
+		return self::canSetStatus($user, $ac) || $user->hasRight('agenda', 'allactions', 'read');
+	}
+
+	/**
+	 * Number of comments on a to-do.
+	 *
+	 * @param int $id Event id
+	 * @return int
+	 */
+	public function countComments($id)
+	{
+		$counts = $this->commentCounts(array((int) $id));
+		return isset($counts[(int) $id]) ? $counts[(int) $id] : 0;
+	}
+
+	/**
+	 * Number of comments on each of several to-dos, in one query.
+	 *
+	 * @param int[] $ids Event ids
+	 * @return array<int,int> Event id => number of comments (only those with some)
+	 */
+	public function commentCounts($ids)
+	{
+		$out = array();
+		$ids = array_filter(array_map('intval', (array) $ids));
+		if (!$ids) {
+			return $out;
+		}
+		$sql = "SELECT c.fk_element, COUNT(c.rowid) as nb";
+		$sql .= " FROM ".MAIN_DB_PREFIX."comment as c";
+		$sql .= " WHERE c.element_type = '".$this->db->escape(self::COMMENT_ELEMENT)."'";
+		$sql .= " AND c.fk_element IN (".$this->db->sanitize(implode(',', $ids)).")";
+		$sql .= " GROUP BY c.fk_element";
+		$resql = $this->db->query($sql);
+		if ($resql) {
+			while ($obj = $this->db->fetch_object($resql)) {
+				$out[(int) $obj->fk_element] = (int) $obj->nb;
+			}
+		}
+		return $out;
+	}
+
+	/**
+	 * A to-do's conversation, oldest first.
+	 *
+	 * @param int $id Event id
+	 * @return array<int,array{id:int,userid:int,name:string,date:int,text:string}>
+	 */
+	public function fetchComments($id)
+	{
+		$out = array();
+		$sql = "SELECT c.rowid, c.datec, c.description, c.fk_user_author, u.firstname, u.lastname, u.login";
+		$sql .= " FROM ".MAIN_DB_PREFIX."comment as c";
+		$sql .= " LEFT JOIN ".MAIN_DB_PREFIX."user as u ON u.rowid = c.fk_user_author";
+		$sql .= " WHERE c.element_type = '".$this->db->escape(self::COMMENT_ELEMENT)."'";
+		$sql .= " AND c.fk_element = ".((int) $id);
+		$sql .= " ORDER BY c.rowid";
+		$sql .= $this->db->plimit(1000);
+		$resql = $this->db->query($sql);
+		if ($resql) {
+			while ($obj = $this->db->fetch_object($resql)) {
+				$name = trim($obj->firstname.' '.$obj->lastname);
+				$out[] = array(
+					'id' => (int) $obj->rowid,
+					'userid' => (int) $obj->fk_user_author,
+					'name' => ($name !== '' ? $name : (string) $obj->login),
+					'date' => (int) $this->db->jdate($obj->datec),
+					'text' => (string) $obj->description,
+				);
+			}
+		}
+		return $out;
+	}
+
+	/**
+	 * Add a comment to a to-do's conversation (core's comment table, the one task comments use).
+	 *
+	 * @param User       $user User writing it
+	 * @param ActionComm $ac   Event
+	 * @param string     $text What they wrote
+	 * @return int             Comment id, 0 when empty, <0 on error (see $this->error)
+	 */
+	public function addComment($user, $ac, $text)
+	{
+		global $conf;
+
+		$text = trim((string) $text);
+		if ($text === '' || !in_array($ac->code, self::codes(), true)) {
+			return 0;
+		}
+		require_once DOL_DOCUMENT_ROOT.'/core/class/comment.class.php';
+		$comment = new Comment($this->db);
+		$comment->description = dol_substr($text, 0, self::COMMENT_MAX);
+		$comment->datec = dol_now();
+		$comment->fk_element = (int) $ac->id;
+		$comment->element_type = self::COMMENT_ELEMENT;
+		$comment->fk_user_author = (int) $user->id;
+		$comment->entity = (int) $conf->entity;
+		// No trigger: core's is TASK_COMMENT_CREATE, which is about project tasks
+		$id = $comment->create($user, 1);
+		if ($id <= 0) {
+			$this->error = $comment->error;
+			return -1;
+		}
+		return $id;
+	}
+
+	/**
+	 * Delete one comment of a to-do: its writer, or an admin.
+	 *
+	 * @param User       $user      User deleting it
+	 * @param ActionComm $ac        Event
+	 * @param int        $commentid Comment id
+	 * @return int                  1 deleted, 0 not this to-do's or not allowed, <0 error (see $this->error)
+	 */
+	public function deleteComment($user, $ac, $commentid)
+	{
+		require_once DOL_DOCUMENT_ROOT.'/core/class/comment.class.php';
+		$comment = new Comment($this->db);
+		if ($commentid <= 0 || $comment->fetch($commentid) <= 0) {
+			return 0;
+		}
+		if ((int) $comment->fk_element !== (int) $ac->id || $comment->element_type !== self::COMMENT_ELEMENT) {
+			return 0;
+		}
+		if ((int) $comment->fk_user_author !== (int) $user->id && empty($user->admin)) {
+			return 0;
+		}
+		if ($comment->delete($user, 1) <= 0) {
+			$this->error = $comment->error;
+			return -1;
+		}
+		return 1;
+	}
+
+	/**
+	 * Delete a to-do's whole conversation (when the event itself is deleted).
+	 *
+	 * @param int $id Event id
+	 * @return void
+	 */
+	public function deleteAllComments($id)
+	{
+		$sql = "DELETE FROM ".MAIN_DB_PREFIX."comment";
+		$sql .= " WHERE element_type = '".$this->db->escape(self::COMMENT_ELEMENT)."' AND fk_element = ".((int) $id);
+		$this->db->query($sql);
+	}
+
+	/**
+	 * Newest comment someone else wrote on a to-do a user sent or is assigned
+	 * to, for the browser notification.
+	 *
+	 * @param int $userid User id
+	 * @return array{id:int,todo:int,label:string,from:string}|null
+	 */
+	public function latestCommentFor($userid)
+	{
+		$sql = "SELECT c.rowid, a.id, a.label, u.firstname, u.lastname, u.login";
+		$sql .= " FROM ".MAIN_DB_PREFIX."comment as c";
+		$sql .= " INNER JOIN ".MAIN_DB_PREFIX."actioncomm as a ON a.id = c.fk_element";
+		$sql .= " LEFT JOIN ".MAIN_DB_PREFIX."user as u ON u.rowid = c.fk_user_author";
+		$sql .= " WHERE c.element_type = '".$this->db->escape(self::COMMENT_ELEMENT)."'";
+		$sql .= " AND c.fk_user_author <> ".((int) $userid);
+		$sql .= " AND a.code IN (".self::codesSql().")";
+		$sql .= " AND a.entity IN (".getEntity('agenda').")";
+		$sql .= " AND (a.fk_user_author = ".((int) $userid);
+		$sql .= " OR EXISTS (SELECT r.rowid FROM ".MAIN_DB_PREFIX."actioncomm_resources as r";
+		$sql .= " WHERE r.fk_actioncomm = a.id AND r.element_type = 'user' AND r.fk_element = ".((int) $userid)."))";
+		$sql .= " ORDER BY c.rowid DESC";
+		$sql .= $this->db->plimit(1);
+		$resql = $this->db->query($sql);
+		if ($resql && ($obj = $this->db->fetch_object($resql))) {
+			$sendername = trim($obj->firstname.' '.$obj->lastname);
+			return array('id' => (int) $obj->rowid, 'todo' => (int) $obj->id, 'label' => (string) $obj->label, 'from' => ($sendername !== '' ? $sendername : (string) $obj->login));
+		}
+		return null;
+	}
+
+	/**
 	 * Active users, for the "Assign to" list.
 	 *
 	 * @return array<int,array{id:int,name:string,login:string}>
@@ -769,7 +964,7 @@ class Headsup
 	 * (core shows the note through dol_htmlentitiesbr + dol_string_onlythesehtmltags, which keep <a href>).
 	 *
 	 * @param string $description What the user wrote (plain text)
-	 * @param array  $context     page (path inside Dolibarr), box, clicked, record (label), recordurl
+	 * @param array{page?:string,box?:string,clicked?:string,record?:string,recordurl?:string} $context page (path inside Dolibarr), box, clicked, record (label), recordurl
 	 * @return string
 	 */
 	public static function buildNote($description, $context)

@@ -2,7 +2,7 @@
 
 ## Storage
 
-Heads-up stores nothing of its own. A to-do is an `ActionComm` (agenda event):
+Heads-up adds no tables. A to-do is an `ActionComm` (agenda event), and its conversation is rows of core's `llx_comment` (see [Conversation](#conversation)):
 
 | Event field | Heads-up meaning |
 |---|---|
@@ -45,6 +45,15 @@ The browser sends the `href`s it sees. `Headsup::parseRecordUrl()` matches them 
 
 `ActionsHeadsup::printCommonFooter` passes the page's own record to the browser, but only when the page URL is that record's card or tab. List pages reuse `$object` for every row, so their last row is never taken as "the page's record".
 
+## Conversation
+
+A to-do's comments are rows of core's `llx_comment`, the table project task comments use, with `element_type = 'action'` and `fk_element` = the event id. They are written through core's `Comment` class, without its triggers (`TASK_COMMENT_CREATE` and `TASK_COMMENT_DELETE` are about tasks). Comments are plain text.
+
+- `Headsup::canComment()` decides who may read and write: whoever may change the state, plus anyone allowed to read every event.
+- The **Conversation** tab is added by the `completeTabsHead` hook, so it shows on Heads-up to-dos only and not on other events.
+- The `ACTION_DELETE` trigger deletes a to-do's comments with it.
+- `ajax/queue.php` also returns `latestComment`: the newest comment by someone else on a to-do the user sent or is assigned to. `headsup.js` shows it once as a browser notification.
+
 ## Assignments
 
 `InterfaceHeadsupTrigger` listens to two kinds of trigger:
@@ -62,6 +71,7 @@ Both are skipped when the user assigns themselves or when **To-do on assignment*
 | `main` | `printCommonFooter` | `window.HEADSUP`: URLs, token, rights, setup choices and the page's record |
 | `main` | `doActions` | The event card's `action=headsup_status` links (checks the token and who may change it) |
 | `main` | `addMoreActionsButtons` | The progress slider and **Status: …** button on the event card |
+| `main` | `completeTabsHead` | The **Conversation** tab on a to-do's event card, with the number of comments |
 
 Hooks provided for other modules: `headsupBeforeFlag` (context `headsupflag`) and `headsupTodoProject` (context `headsuptodo`). See the [integration guide](integration.md).
 
@@ -72,7 +82,7 @@ module/
 ├── admin/setup.php                      Setup page
 ├── ajax/
 │   ├── flag.php                         Save a flag or problem report
-│   ├── queue.php                        Open count; change state or progress
+│   ├── queue.php                        Open count, newest comment; change state or progress
 │   ├── users.php                        Active users for "Assign to"
 │   ├── resolve.php                      Links → record, for "Links to: …"
 │   ├── projects.php                     Project search for the Project field
@@ -82,8 +92,9 @@ module/
 │   └── actions_headsup.class.php        Hooks on the 'main' context
 ├── core/
 │   ├── modules/modHeadsup.class.php     Module descriptor, event types, menus, rights
-│   └── triggers/interface_99_modHeadsup_HeadsupTrigger.class.php   Assignment to-dos
-├── css/headsup.css                      Popup, queue, slider, cards on small screens
+│   └── triggers/interface_99_modHeadsup_HeadsupTrigger.class.php   Assignment to-dos; comments of a deleted to-do
+├── comments.php                         Conversation tab of a to-do's event card
+├── css/headsup.css                      Popup, queue, slider, conversation, cards on small screens
 ├── js/headsup.js                        Alt+click, pick mode, popup, notifications, queue controls
 ├── langs/en_US/headsup.lang             Translations
 └── queue.php                            My queue page and its tabs

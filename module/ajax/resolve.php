@@ -26,7 +26,7 @@ if (!defined('NOREQUIREAJAX')) {
 }
 
 $res = 0;
-if (!$res && file_exists("../../main.inc.php")) {
+if (file_exists("../../main.inc.php")) {
 	$res = @include "../../main.inc.php";
 }
 if (!$res && file_exists("../../../main.inc.php")) {
@@ -36,6 +36,14 @@ if (!$res) {
 	http_response_code(500);
 	exit;
 }
+/**
+ * @var DoliDB $db
+ * @var Translate $langs
+ * @var User $user
+ */
+'@phan-var-force DoliDB $db';
+'@phan-var-force Translate $langs';
+'@phan-var-force User $user';
 
 dol_include_once('/headsup/class/headsup.class.php');
 
@@ -46,7 +54,7 @@ if (!isModEnabled('headsup') || !$user->hasRight('headsup', 'send')) {
 	exit;
 }
 
-$hrefs = GETPOST('links', 'array:nohtml');
+$hrefs = GETPOST('links', 'array:alphanohtml');
 $hu = new Headsup($db);
 $obj = $hu->resolveLinks(is_array($hrefs) ? $hrefs : array());
 if (!$obj) {

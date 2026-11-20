@@ -827,6 +827,42 @@
 		} catch (e) { /* notifications unavailable here */ }
 	}
 
+	/* The same for the newest comment someone else wrote on one of my to-dos;
+	 * clicking it opens that conversation. */
+	function maybeNotifyComment(latest) {
+		var c = cfg();
+		if (!latest || !latest.id || !c) {
+			return;
+		}
+		var key = 'headsup-seen-comment-' + c.me;
+		var seen;
+		try {
+			seen = window.localStorage.getItem(key);
+			if (seen !== null && Number(seen) >= latest.id) {
+				return;
+			}
+			window.localStorage.setItem(key, String(latest.id));
+		} catch (e) {
+			return;
+		}
+		if (seen === null || !notifyAllowed()) {
+			return;
+		}
+		try {
+			var n = new Notification('Heads-up: ' + (latest.from ? latest.from + ' commented' : 'new comment'), {
+				body: latest.label || '',
+				tag: 'headsup-comment-' + latest.id
+			});
+			n.onclick = function () {
+				window.focus();
+				if (c.commentsPageUrl && latest.todo) {
+					window.location.href = c.commentsPageUrl + '?id=' + encodeURIComponent(latest.todo);
+				}
+				n.close();
+			};
+		} catch (e) { /* notifications unavailable here */ }
+	}
+
 	function refreshCount() {
 		var c = cfg();
 		/* Background tabs keep checking only when they can show a notification */
@@ -841,6 +877,7 @@
 				}
 				if (data) {
 					maybeNotify(data.latest);
+					maybeNotifyComment(data.latestComment);
 				}
 			})
 			.catch(function () {});

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.12
+
+- New **Conversation** tab on a to-do's event card, for comments back and forth: the to-do first, then the comments oldest first, yours on the right, and a box to write one. The tab shows the number of comments. Comments are plain text; you can delete your own, an administrator anyone's.
+- My queue rows link to the conversation: **Comment**, or the number of comments.
+- A browser notification when someone else comments on a to-do you sent or are assigned to. Clicking it opens that conversation.
+- Comments are kept in Dolibarr's own comment table (the one task comments use), so the module still adds no tables. Deleting a to-do deletes its comments.
+- Code cleanup: the module passes phpcs, phpstan and phan with no findings.
+
 ## 0.3.11
 
 - Same as 0.3.10, built with New to-do and the phone popup. The first 0.3.10 zip was built before them; this number tells the two apart in Setup → Modules.

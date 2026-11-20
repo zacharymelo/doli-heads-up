@@ -109,8 +109,25 @@ These people can change a to-do's state:
 
 To reopen a finished to-do, move its slider or picker back on the Completed tab.
 
+## Conversation
+
+Every to-do has a **Conversation** tab on its event card, for questions and answers about it. The tab shows the number of comments. In My queue, each to-do has a link to it: **Comment**, or **2 comments** once there are some.
+
+The tab shows the to-do first, then the comments, oldest first, with yours on the right. Write in the box at the bottom and press **Send**. Comments are plain text.
+
+The people who can read and write there are:
+
+- the people the to-do is assigned to
+- its sender
+- anyone who can see everyone's flags
+- anyone allowed to read or edit every event
+
+You can delete your own comments (the bin next to the date). An administrator can delete anyone's. Deleting the to-do deletes its conversation.
+
 ## Browser notifications
 
 When a new flag, problem report or assignment reaches you, the browser shows a notification such as "Heads-up from Sam: …". Clicking it opens My queue.
+
+When someone else comments on a to-do you sent or are assigned to, the notification reads "Heads-up: Sam commented". Clicking it opens that conversation.
 
 The browser asks for permission the first time you open the flag menu or the popup. Each to-do is shown once across all your tabs. Background tabs keep checking only after you have allowed notifications.

@@ -24,7 +24,7 @@ class ActionsHeadsup
 	/** @var string */
 	public $error = '';
 
-	/** @var array<string,mixed> */
+	/** @var array<int|string,mixed> */
 	public $results = array();
 
 	/** @var string */
@@ -178,6 +178,42 @@ class ActionsHeadsup
 	}
 
 	/**
+	 * Event card tabs: a Conversation tab, with the number of comments, on Heads-up to-dos only.
+	 *
+	 * @param array<string,mixed> $parameters  Hook parameters: mode (add, remove), type (not before v21), head
+	 * @param ?object             $object      The record whose tabs are built
+	 * @param string              $action      Unused
+	 * @param HookManager         $hookmanager Hook manager
+	 * @return int                             0 (the tab in $this->results is added after the others)
+	 */
+	public function completeTabsHead($parameters, &$object, &$action, $hookmanager)
+	{
+		global $langs;
+
+		// Core does not reset results between hooks, and calls this again in 'remove' mode
+		$this->results = array();
+		if ((isset($parameters['mode']) && $parameters['mode'] !== 'add') || (isset($parameters['type']) && $parameters['type'] !== 'action')) {
+			return 0;
+		}
+		if (!isModEnabled('headsup') || !($object instanceof ActionComm) || empty($object->id)) {
+			return 0;
+		}
+		dol_include_once('/headsup/class/headsup.class.php');
+		if (!in_array($object->code, Headsup::codes(), true)) {
+			return 0;
+		}
+		$langs->load('headsup@headsup');
+		$hu = new Headsup($this->db);
+		$nb = $hu->countComments((int) $object->id);
+		$label = $langs->trans('HeadsupConversation');
+		if ($nb > 0) {
+			$label .= '<span class="badge marginleftonlyshort">'.$nb.'</span>';
+		}
+		$this->results = array(array(dol_buildpath('/headsup/comments.php', 1).'?id='.((int) $object->id), $label, 'headsup'));
+		return 0;
+	}
+
+	/**
 	 * Settings and the record on this page, for headsup.js.
 	 *
 	 * @param array<string,mixed> $parameters  Hook parameters
@@ -235,6 +271,7 @@ class ActionsHeadsup
 			'flagUrl' => dol_buildpath('/headsup/ajax/flag.php', 1),
 			'queueUrl' => dol_buildpath('/headsup/ajax/queue.php', 1),
 			'queuePageUrl' => dol_buildpath('/headsup/queue.php', 1),
+			'commentsPageUrl' => dol_buildpath('/headsup/comments.php', 1),
 			'usersUrl' => dol_buildpath('/headsup/ajax/users.php', 1),
 			'resolveUrl' => dol_buildpath('/headsup/ajax/resolve.php', 1),
 			'projectsUrl' => dol_buildpath('/headsup/ajax/projects.php', 1),

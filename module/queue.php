@@ -14,7 +14,7 @@
  *          everything currently assigned to me.
  */
 $res = 0;
-if (!$res && file_exists("../main.inc.php")) {
+if (file_exists("../main.inc.php")) {
 	$res = @include "../main.inc.php";
 }
 if (!$res && file_exists("../../main.inc.php")) {
@@ -195,7 +195,7 @@ if ($events && $view !== 'me') {
 	$sql = "SELECT r.fk_actioncomm, u.firstname, u.lastname, u.login";
 	$sql .= " FROM ".MAIN_DB_PREFIX."actioncomm_resources as r";
 	$sql .= " INNER JOIN ".MAIN_DB_PREFIX."user as u ON u.rowid = r.fk_element";
-	$sql .= " WHERE r.element_type = 'user' AND r.fk_actioncomm IN (".implode(',', array_keys($events)).")";
+	$sql .= " WHERE r.element_type = 'user' AND r.fk_actioncomm IN (".$db->sanitize(implode(',', array_keys($events))).")";
 	$resql = $db->query($sql);
 	if ($resql) {
 		while ($obj = $db->fetch_object($resql)) {
@@ -204,6 +204,10 @@ if ($events && $view !== 'me') {
 		}
 	}
 }
+
+// How many comments each one has
+$commentcounts = $hu->commentCounts(array_keys($events));
+$commentsurl = dol_buildpath('/headsup/comments.php', 1).'?id=';
 
 // ---------------------------------------------------------------------------
 // View
@@ -291,13 +295,18 @@ foreach ($events as $ev) {
 		}
 		print '</div>';
 	}
+	// Its conversation: the number of comments, or an invitation to start one
+	$nbcomments = isset($commentcounts[(int) $ev->id]) ? $commentcounts[(int) $ev->id] : 0;
+	print '<div class="headsup-note"><a class="headsup-discuss" href="'.dolPrintHTMLForAttributeUrl($commentsurl.((int) $ev->id)).'">'.img_picto('', 'fa-comments', 'class="pictofixedwidth"');
+	print $nbcomments > 0 ? $langs->trans($nbcomments > 1 ? 'HeadsupNbComments' : 'HeadsupOneComment', $nbcomments) : $langs->trans('HeadsupDiscuss');
+	print '</a></div>';
 	print '</td>';
 
 	print '<td class="tdoverflowmax200 headsup-col-record">'.headsup_record_link($db, $ev).'</td>';
 
 	if ($view === 'me' || $view === 'done') {
-		$from = trim($ev->a_firstname.' '.$ev->a_lastname);
-		print '<td class="tdoverflowmax150 headsup-col-who" data-label="'.dolPrintHTMLForAttribute($langs->transnoentitiesnoconv('HeadsupFrom')).'">'.dol_escape_htmltag($from !== '' ? $from : (string) $ev->a_login).'</td>';
+		$sendername = trim($ev->a_firstname.' '.$ev->a_lastname);
+		print '<td class="tdoverflowmax150 headsup-col-who" data-label="'.dolPrintHTMLForAttribute($langs->transnoentitiesnoconv('HeadsupFrom')).'">'.dol_escape_htmltag($sendername !== '' ? $sendername : (string) $ev->a_login).'</td>';
 	} else {
 		print '<td class="tdoverflowmax200 headsup-col-who" data-label="'.dolPrintHTMLForAttribute($langs->transnoentitiesnoconv('HeadsupTo')).'">'.dol_escape_htmltag(implode(', ', isset($assignees[$ev->id]) ? $assignees[$ev->id] : array())).'</td>';
 	}
@@ -483,7 +492,7 @@ if ($view === 'me') {
 	$sql = "SELECT s.rowid, s.nom, s.client, s.fournisseur, s.town";
 	$sql .= " FROM ".MAIN_DB_PREFIX."societe_commerciaux as sc";
 	$sql .= " INNER JOIN ".MAIN_DB_PREFIX."societe as s ON s.rowid = sc.fk_soc";
-	$sql .= " WHERE sc.fk_user = ".$uid." AND s.status = 1 AND s.entity IN (".getEntity('societe').")";
+	$sql .= " WHERE sc.fk_user = ".((int) $uid)." AND s.status = 1 AND s.entity IN (".getEntity('societe').")";
 	$sql .= " ORDER BY s.nom LIMIT 200";
 	$resql = $db->query($sql);
 	print '<div class="div-table-responsive-no-min"><table class="noborder centpercent headsup-mine"><tr class="liste_titre"><th colspan="2">'.$langs->trans('HeadsupMyThirdparties').'</th></tr>';

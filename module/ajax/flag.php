@@ -26,7 +26,7 @@ if (!defined('NOREQUIREAJAX')) {
 }
 
 $res = 0;
-if (!$res && file_exists("../../main.inc.php")) {
+if (file_exists("../../main.inc.php")) {
 	$res = @include "../../main.inc.php";
 }
 if (!$res && file_exists("../../../main.inc.php")) {
@@ -53,7 +53,7 @@ dol_include_once('/headsup/class/headsup.class.php');
  * Reply with JSON and stop.
  *
  * @param int   $status HTTP status
- * @param array $data   Body
+ * @param array<string,mixed> $data Body
  * @return never
  */
 function headsup_reply($status, $data)

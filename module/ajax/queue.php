@@ -26,7 +26,7 @@ if (!defined('NOREQUIREAJAX')) {
 }
 
 $res = 0;
-if (!$res && file_exists("../../main.inc.php")) {
+if (file_exists("../../main.inc.php")) {
 	$res = @include "../../main.inc.php";
 }
 if (!$res && file_exists("../../../main.inc.php")) {
@@ -85,4 +85,4 @@ if ($postaction === 'done' || $postaction === 'status' || $postaction === 'progr
 	exit;
 }
 
-print json_encode(array('ok' => 1, 'count' => $hu->countOpenFor($user->id), 'latest' => $hu->latestOpenFor($user->id)));
+print json_encode(array('ok' => 1, 'count' => $hu->countOpenFor($user->id), 'latest' => $hu->latestOpenFor($user->id), 'latestComment' => $hu->latestCommentFor($user->id)));

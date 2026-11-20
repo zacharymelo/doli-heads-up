@@ -297,6 +297,60 @@ html.headsup-picking * {
 	opacity: 0.55;
 }
 
+/* Conversation tab of a to-do: comments oldest first, mine on the right, the box to add one last */
+.headsup-thread {
+	max-width: 760px;
+	margin-top: 12px;
+}
+.headsup-comment {
+	width: fit-content;
+	max-width: 85%;
+	margin: 0 0 10px;
+	padding: 8px 12px;
+	box-sizing: border-box;
+	border-radius: 10px;
+	background: rgba(128, 128, 128, 0.12);
+	overflow-wrap: anywhere;
+}
+.headsup-comment-mine {
+	margin-left: auto;
+	background: rgba(38, 120, 220, 0.14);
+}
+/* The to-do itself, at the top */
+.headsup-comment-first {
+	max-width: 100%;
+	border-left: 3px solid rgba(128, 128, 128, 0.5);
+	border-radius: 4px 10px 10px 4px;
+}
+.headsup-comment-head {
+	margin-bottom: 2px;
+	font-size: 0.9em;
+}
+.headsup-comment-delete {
+	margin-left: 6px;
+	opacity: 0.5;
+}
+.headsup-comment-delete:hover,
+.headsup-comment-delete:focus {
+	opacity: 1;
+}
+/* Arriving from a notification or after sending: show which one */
+.headsup-comment:target {
+	box-shadow: 0 0 0 2px rgba(38, 120, 220, 0.45);
+}
+.headsup-thread-empty {
+	margin: 4px 0 12px;
+}
+.headsup-comment-form {
+	margin-top: 16px;
+}
+.headsup-comment-form textarea {
+	width: 100%;
+	box-sizing: border-box;
+	margin-bottom: 6px;
+	font-size: 16px;	/* below 16px, iOS zooms the page when the box is tapped */
+}
+
 /* Completed tab: finished rows at full strength; one reopened here fades until the page reloads */
 #headsup-events.headsup-completed tr.headsup-done-row {
 	opacity: 1;

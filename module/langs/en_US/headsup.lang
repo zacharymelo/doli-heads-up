@@ -95,3 +95,15 @@ HeadsupNothingDone = Nothing finished yet. To-dos you mark done show here.
 # Project field in the popup
 HeadsupProjectField = Project field in the popup
 HeadsupProjectFieldDesc = Off by default. On: the flag popup has a Project field. It stays on Automatic unless the sender searches for one of the open projects they can see (or picks No project). Off: the to-do takes the project of the record it is about, or the one another module passes in.
+
+# Conversation tab of a to-do
+HeadsupConversation = Conversation
+HeadsupDiscuss = Comment
+HeadsupOneComment = %s comment
+HeadsupNbComments = %s comments
+HeadsupNoComments = No comments yet. Ask a question or say where it stands.
+HeadsupWriteComment = Write a comment
+HeadsupSendComment = Send
+HeadsupDeleteComment = Delete comment
+HeadsupDeleteCommentConfirm = Delete this comment? It cannot be brought back.
+HeadsupCommentDeleted = Comment deleted

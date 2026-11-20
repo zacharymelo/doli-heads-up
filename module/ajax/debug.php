@@ -15,7 +15,7 @@
  * Modes (?mode=): overview (default), events, settings, all
  */
 $res = 0;
-if (!$res && file_exists("../../main.inc.php")) {
+if (file_exists("../../main.inc.php")) {
 	$res = @include "../../main.inc.php";
 }
 if (!$res && file_exists("../../../main.inc.php")) {
@@ -25,6 +25,14 @@ if (!$res) {
 	http_response_code(500);
 	exit;
 }
+/**
+ * @var Conf $conf
+ * @var DoliDB $db
+ * @var User $user
+ */
+'@phan-var-force Conf $conf';
+'@phan-var-force DoliDB $db';
+'@phan-var-force User $user';
 
 if (!$user->admin) {
 	http_response_code(403);

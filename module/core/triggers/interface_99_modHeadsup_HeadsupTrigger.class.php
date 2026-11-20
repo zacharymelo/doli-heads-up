@@ -29,7 +29,7 @@ class InterfaceHeadsupTrigger extends DolibarrTriggers
 		parent::__construct($db);
 		$this->family = 'crm';
 		$this->description = 'Heads-up: a to-do for whoever gets assigned to a record';
-		$this->version = '0.1.0';
+		$this->version = self::VERSIONS['prod'];
 		$this->picto = 'fa-flag';
 	}
 
@@ -59,6 +59,16 @@ class InterfaceHeadsupTrigger extends DolibarrTriggers
 	 */
 	public function runTrigger($action, $object, User $user, Translate $langs, Conf $conf)
 	{
+		// A deleted to-do takes its conversation with it
+		if ($action === 'ACTION_DELETE' && isModEnabled('headsup') && !empty($object->id) && isset($object->code)) {
+			dol_include_once('/headsup/class/headsup.class.php');
+			if (in_array($object->code, Headsup::codes(), true)) {
+				$hu = new Headsup($this->db);
+				$hu->deleteAllComments((int) $object->id);
+			}
+			return 0;
+		}
+
 		if (!isModEnabled('headsup') || !getDolGlobalInt('HEADSUP_NOTIFY_ASSIGNMENTS', 1)) {
 			return 0;
 		}
