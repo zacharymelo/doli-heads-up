@@ -1,6 +1,6 @@
 /* Heads-up: Alt+click (Option+click) anything, or click the flag in the top
- * bar and then click something, to open a small popup that sends a to-do or
- * a problem report without leaving the page.
+ * bar and then click something, to open a small popup that sends a to-do
+ * without leaving the page.
  *
  * Settings and the record on the page come from window.HEADSUP, printed in
  * the page footer by ActionsHeadsup::printCommonFooter().
@@ -298,9 +298,8 @@
 		var kind = 'todo';
 		var selected = {};
 		var screenshotDataUrl = null;
-
-		var tabTodo = el('button', { type: 'button', className: 'headsup-tab headsup-tab-on', text: 'To-do' });
-		var tabProblem = el('button', { type: 'button', className: 'headsup-tab', text: 'Report a problem' });
+		var selectedTags = {};
+		var tagsLoaded = false;
 
 		var filter = el('input', { type: 'text', className: 'headsup-filter', placeholder: 'Search people…' });
 		var userList = el('div', { className: 'headsup-users', text: 'Loading…' });
@@ -440,9 +439,13 @@
 			close
 		]);
 
+		var tagsLabel = el('label', { className: 'headsup-label', text: 'Tags' });
+		var tagsBox = el('div', { className: 'headsup-tags', text: 'Loading…' });
+		tagsLabel.hidden = true;
+		tagsBox.hidden = true;
+
 		var form = el('form', { className: 'headsup-form' }, [
 			head,
-			el('div', { className: 'headsup-tabs' }, [tabTodo, tabProblem]),
 			whereLine,
 			linkedLine,
 			el('label', { className: 'headsup-label', text: 'Assign to' }),
@@ -457,6 +460,8 @@
 			screenshotBox,
 			projectBox ? el('label', { className: 'headsup-label', text: 'Project' }) : null,
 			projectBox,
+			tagsLabel,
+			tagsBox,
 			el('div', { className: 'headsup-actions' }, [cancel, send])
 		]);
 
@@ -597,27 +602,6 @@
 			}
 		}
 
-		function setKind(k) {
-			kind = k;
-			tabTodo.classList.toggle('headsup-tab-on', k === 'todo');
-			tabProblem.classList.toggle('headsup-tab-on', k === 'problem');
-			if (k === 'problem') {
-				if (!Object.keys(selected).length && c.problemUser) {
-					selectUser(c.problemUser);
-				}
-				if (!title.value && !standalone) {
-					title.value = 'Problem: ' + (context.box || context.clicked || document.title);
-				}
-				desc.placeholder = "What's wrong? What did you expect to see?";
-			} else {
-				desc.placeholder = 'What should they look at? (optional)';
-			}
-			renderChosen();
-			renderUsers();
-		}
-
-		tabTodo.addEventListener('click', function () { setKind('todo'); });
-		tabProblem.addEventListener('click', function () { setKind('problem'); });
 		filter.addEventListener('input', renderUsers);
 		filter.addEventListener('keydown', function (e) {
 			if (e.key === 'Enter') {
@@ -655,8 +639,8 @@
 			if (confirmed) {
 				body.append('confirm', '1');
 			}
-			body.append('kind', kind);
 			ids.forEach(function (id) { body.append('users[]', id); });
+			Object.keys(selectedTags).forEach(function (id) { body.append('categories[]', id); });
 			body.append('title', title.value.trim());
 			body.append('description', desc.value);
 			body.append('page', context.page);
@@ -688,7 +672,7 @@
 				.then(function (data) {
 					if (data && data.ok) {
 						closePopup();
-						toast(kind === 'problem' ? 'Problem reported' : 'Sent');
+						toast('Sent');
 						if (typeof data.count === 'number') {
 							setCount(data.count);
 						}
@@ -732,9 +716,6 @@
 					}
 					clickedRecord = r;
 					linkedLine.textContent = 'Links to: ' + r.label;
-					if (kind === 'problem' && title.value.indexOf('Problem: ') === 0 && !context.box) {
-						title.value = 'Problem: ' + r.label;
-					}
 					place();
 				})
 				.catch(function () {});
@@ -823,6 +804,40 @@
 		}).catch(function () {
 			userList.textContent = 'Could not load users';
 		});
+
+		/* Tags: load actioncomm categories, show as toggleable chips */
+		if (c.tagsUrl && !tagsLoaded) {
+			fetch(c.tagsUrl, { credentials: 'same-origin' })
+				.then(function (r) { return r.json(); })
+				.then(function (data) {
+					tagsLoaded = true;
+					var tagList = Array.isArray(data) ? data : (data.tags || []);
+					if (!popup || !tagList.length) {
+						return;
+					}
+					tagsBox.textContent = '';
+					tagList.forEach(function (tag) {
+						var color = tag.color ? '#' + tag.color : '#999';
+						var btn = el('button', { type: 'button', className: 'headsup-tag', text: tag.label });
+						btn.style.background = color;
+						btn.style.borderColor = color;
+						btn.addEventListener('click', function () {
+							if (selectedTags[tag.id]) {
+								delete selectedTags[tag.id];
+								btn.classList.remove('headsup-tag-on');
+							} else {
+								selectedTags[tag.id] = tag.label;
+								btn.classList.add('headsup-tag-on');
+							}
+						});
+						tagsBox.appendChild(btn);
+					});
+					tagsLabel.hidden = false;
+					tagsBox.hidden = false;
+					place();
+				})
+				.catch(function () {});
+		}
 	}
 
 	/* ---------- Pick mode ---------- */

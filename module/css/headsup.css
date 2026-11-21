@@ -275,6 +275,34 @@ html.headsup-picking * {
 	margin-top: 10px;
 }
 
+/* Tags (categories) section in the popup */
+.headsup-tags {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+	margin-top: 4px;
+}
+.headsup-tag {
+	padding: 2px 10px;
+	border: 1px solid #bbb;
+	border-radius: 12px;
+	background: #bbb;
+	color: #fff;
+	font: inherit;
+	font-size: 0.9em;
+	cursor: pointer;
+	opacity: 0.6;
+	transition: opacity 0.1s;
+}
+.headsup-tag:hover,
+.headsup-tag:focus {
+	opacity: 0.85;
+}
+.headsup-tag-on {
+	opacity: 1;
+	box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.18);
+}
+
 /* Screenshot section in the popup */
 .headsup-screenshot {
 	margin-top: 4px;
