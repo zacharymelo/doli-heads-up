@@ -141,6 +141,15 @@ html.headsup-picking * {
 .headsup-head-title {
 	font-weight: bold;
 }
+/* The title bar drags the popup off whatever it covers. Not on a phone, where
+   the popup fills the screen and there is nothing to move it off. */
+@media only screen and (min-width: 601px) {
+	.headsup-popup .headsup-head,
+	.headsup-popup .headsup-head-title {
+		cursor: move;
+		touch-action: none;
+	}
+}
 .headsup-close {
 	min-width: 32px;
 	min-height: 32px;

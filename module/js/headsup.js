@@ -10,6 +10,8 @@
 
 	var picking = false;
 	var popup = null;
+	/* The open popup's place(): the window changing size has to reach it */
+	var placePopup = null;
 	var usersCache = null;
 	/* On a phone the popup adds a history entry, so the back gesture closes it */
 	var historyPushed = false;
@@ -151,6 +153,7 @@
 			popup.remove();
 			popup = null;
 		}
+		placePopup = null;
 		document.documentElement.classList.remove('headsup-popup-open');
 		document.removeEventListener('keydown', onPopupKey, true);
 		if (historyPushed && how !== 'reopen') {
@@ -370,6 +373,12 @@
 			}
 		}
 
+		/* Set once the user has dragged it: where they put it wins over the click,
+		 * and survives the popup filling the screen and coming back */
+		var moved = false;
+		var movedleft = 0;
+		var movedtop = 0;
+
 		/* Place it next to the click, kept on screen (again whenever it grows).
 		 * On a phone the stylesheet makes it fill the screen instead. */
 		function place() {
@@ -383,10 +392,47 @@
 			}
 			var w = popup.offsetWidth;
 			var h = popup.offsetHeight;
-			popup.style.left = Math.max(8, Math.min(x + 12, window.innerWidth - w - 8)) + 'px';
-			popup.style.top = Math.max(8, Math.min(y + 12, window.innerHeight - h - 8)) + 'px';
+			var left = moved ? movedleft : x + 12;
+			var top = moved ? movedtop : y + 12;
+			popup.style.left = Math.max(8, Math.min(left, window.innerWidth - w - 8)) + 'px';
+			popup.style.top = Math.max(8, Math.min(top, window.innerHeight - h - 8)) + 'px';
 		}
 		place();
+		placePopup = place;
+
+		/* The title bar drags the popup, so it can be moved off whatever it
+		 * covers. On a phone it fills the screen, so there is nothing to move. */
+		head.addEventListener('pointerdown', function (e) {
+			if (isSmallScreen() || e.button || !(e.target instanceof Element) || e.target.closest('.headsup-close')) {
+				return;
+			}
+			var box = popup.getBoundingClientRect();
+			var grabx = e.clientX - box.left;
+			var graby = e.clientY - box.top;
+			e.preventDefault();
+
+			/* On the document, not the title bar: the pointer leaves the bar long
+			 * before the drag ends, and this needs no pointer capture to follow it. */
+			function drag(ev) {
+				if (!popup) {
+					drop();
+					return;
+				}
+				moved = true;
+				movedleft = Math.max(8, Math.min(ev.clientX - grabx, window.innerWidth - popup.offsetWidth - 8));
+				movedtop = Math.max(8, Math.min(ev.clientY - graby, window.innerHeight - popup.offsetHeight - 8));
+				popup.style.left = movedleft + 'px';
+				popup.style.top = movedtop + 'px';
+			}
+			function drop() {
+				document.removeEventListener('pointermove', drag, true);
+				document.removeEventListener('pointerup', drop, true);
+				document.removeEventListener('pointercancel', drop, true);
+			}
+			document.addEventListener('pointermove', drag, true);
+			document.addEventListener('pointerup', drop, true);
+			document.addEventListener('pointercancel', drop, true);
+		});
 
 		function renderChosen() {
 			chosen.textContent = '';
@@ -675,6 +721,21 @@
 
 	/* ---------- Pick mode ---------- */
 
+	/* Dolibarr slides its left menu over the page on a narrow window. In pick
+	 * mode there is nothing to pick behind it, so move it aside first. Close it
+	 * through the theme's own hamburger, so the theme keeps whatever it keeps.
+	 *
+	 * @return {void}
+	 */
+	function closeSideMenu() {
+		var hider = document.querySelector('.menuhider');
+		var nav = document.querySelector('.side-nav');
+		if (!hider || !nav || !nav.getBoundingClientRect().width) {
+			return;
+		}
+		hider.click();
+	}
+
 	function setPicking(on) {
 		picking = on;
 		document.documentElement.classList.toggle('headsup-picking', on);
@@ -761,6 +822,12 @@
 			setPicking(false);
 			return;
 		}
+		/* The hamburger still works while picking. Otherwise, with the left menu
+		 * open over the page, flagging it is the only thing a tap there can do
+		 * and there is no way left to move it aside. */
+		if (picking && target.closest('.menuhider')) {
+			return;
+		}
 		/* New to-do (top bar menu, My queue button): a blank popup, linked to nothing */
 		if (!picking && target.closest('.headsup-new, #headsup-new')) {
 			e.preventDefault();
@@ -776,6 +843,9 @@
 			e.stopPropagation();
 			if (menu) {
 				menu.hidden = true;
+			}
+			if (!picking) {
+				closeSideMenu();
 			}
 			setPicking(!picking);
 			return;
@@ -825,9 +895,15 @@
 		}
 	});
 
-	/* Turning the phone sideways, or the keyboard opening, moves the flag icon */
+	/* The window changing size moves the flag icon, and decides whether the
+	 * popup is a box placed on the page or fills the screen. Crossing between
+	 * the two has to clear the place it was dragged to, or the inline position
+	 * would override the full-screen rules. */
 	window.addEventListener('resize', function () {
 		placeMenu(document.querySelector('.headsup-menu'));
+		if (placePopup) {
+			placePopup();
+		}
 	});
 
 	/* ---------- Top bar count ---------- */

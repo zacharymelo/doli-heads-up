@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.16
+
+- **The popup can be moved out of the way.** Drag it by its title bar to see whatever it covers. It stays on the screen however far you drag, keeps the place you put it when the form grows, and goes back there after the window has been narrow enough for the popup to fill the screen. On a phone it still fills the screen, so there is nothing to drag.
+- Flagging something on a phone is no longer a dead end. Dolibarr slides its left menu over the page on a narrow screen, and **Flag something on this page** left it there, over the very thing you meant to tap. Worse, the hamburger that would move it aside was itself flagged instead, so the only way out was Cancel. Pick mode now moves the menu aside as it starts, and the hamburger keeps working while you pick.
+- A popup that had been placed on the page kept that place when the window was narrowed, which left it part way across the screen instead of filling it. It is placed again whenever the window changes size.
+
 ## 0.3.15
 
 - The flag icon's menu now keeps itself on the screen at any window width, not just on a phone. 0.3.14 fixed the clipping below 600px, but the width at which Dolibarr moves the top bar icons into the slide-out menu is the theme's business, not ours: on a window a little wider than that the menu still ran off the left edge. It is now measured where it actually lands and pulled back, so the breakpoint no longer matters. Lines wrap rather than overflow when the menu is wider than the window.
