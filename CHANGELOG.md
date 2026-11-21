@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.14
+
+- The flag icon's menu is readable on a phone again. On a small screen Dolibarr moves the top bar icons into the slide-out menu, part-way across the screen, and the menu hung under the icon's right edge ran off the left: the icon and the first words of **New to-do**, **Flag something on this page** and **My queue** were cut off and could not be tapped. It now spans the screen under the icon, with taller rows and labels that wrap.
+
 ## 0.3.13
 
 - **Mentions** in a to-do's conversation, so nobody has to send a Heads-up about a Heads-up: type **@** in the comment box and pick someone (or type `@login`). Their name is highlighted in the comment.

@@ -572,6 +572,31 @@ html.headsup-picking * {
 	}
 }
 
+/* Phone: the flag icon sits inside the slide-out menu, part-way across the
+   screen, so a menu hung under its right edge runs off the left and takes the
+   icon and the first words of every line with it. Here the menu spans the
+   screen instead, with its top set from the icon by placeMenu() in headsup.js */
+@media only screen and (max-width: 600px) {
+	.headsup-menu {
+		position: fixed;
+		left: 8px;
+		right: 8px;
+		top: auto;
+		min-width: 0;
+		max-width: none;
+		white-space: normal;
+		font-size: 15px;
+	}
+	.headsup-menu a.headsup-menu-item {
+		gap: 8px;
+		padding: 14px 16px;
+	}
+	/* The label wraps rather than pushing the count out of the menu */
+	.headsup-menu a.headsup-menu-item > span.pictofixedwidth {
+		flex: 0 0 auto;
+	}
+}
+
 /* Phone: the popup fills the screen, with the close button always at the top
    and Send / Cancel always at the bottom */
 @media only screen and (max-width: 600px) {

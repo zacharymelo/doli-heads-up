@@ -691,6 +691,27 @@
 		}
 	}
 
+	/* On a phone the menu is a fixed sheet across the screen (see headsup.css),
+	 * so its top is set here from the flag icon, wherever the theme puts it.
+	 * On a wider screen it hangs under the icon and needs nothing.
+	 *
+	 * @param {Element|null} menu The menu, open
+	 * @return {void}
+	 */
+	function placeMenu(menu) {
+		var badge = document.querySelector('.headsup-badge');
+		if (!menu || !badge || menu.hidden) {
+			return;
+		}
+		if (window.getComputedStyle(menu).position !== 'fixed') {
+			menu.style.top = '';
+			return;
+		}
+		var box = badge.getBoundingClientRect();
+		var room = window.innerHeight - menu.offsetHeight - 8;
+		menu.style.top = Math.round(Math.max(8, Math.min(box.bottom + 8, room))) + 'px';
+	}
+
 	/* Capture phase, so we act before links, buttons and Dolibarr's own handlers. */
 	document.addEventListener('click', function (e) {
 		var c = cfg();
@@ -736,6 +757,7 @@
 			e.preventDefault();
 			e.stopPropagation();
 			menu.hidden = !menu.hidden;
+			placeMenu(menu);
 			askNotifyPermission();
 			target.closest('.headsup-badge').setAttribute('aria-expanded', menu.hidden ? 'false' : 'true');
 			return;
@@ -772,6 +794,11 @@
 		if (e.key === 'Escape' && menu && !menu.hidden) {
 			menu.hidden = true;
 		}
+	});
+
+	/* Turning the phone sideways, or the keyboard opening, moves the flag icon */
+	window.addEventListener('resize', function () {
+		placeMenu(document.querySelector('.headsup-menu'));
 	});
 
 	/* ---------- Top bar count ---------- */
