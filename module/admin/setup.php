@@ -70,6 +70,30 @@ if ($action === 'setstatuscontrol') {
 	header('Location: '.$_SERVER['PHP_SELF']);
 	exit;
 }
+if ($action === 'setpopuplayout') {
+	$raw = GETPOST('HEADSUP_POPUP_LAYOUT', 'none');
+	$layout = json_decode($raw ?: '[]', true);
+	$validkeys = array('title', 'description', 'screenshot', 'tags', 'project');
+	$clean = array();
+	$seen = array();
+	foreach ((array) $layout as $item) {
+		if (!is_array($item) || !isset($item['key'], $item['fold'])) {
+			continue;
+		}
+		if (!in_array($item['key'], $validkeys, true) || !in_array($item['fold'], array('above', 'below'), true)) {
+			continue;
+		}
+		if (in_array($item['key'], $seen, true)) {
+			continue;
+		}
+		$clean[] = array('key' => $item['key'], 'fold' => $item['fold']);
+		$seen[] = $item['key'];
+	}
+	dolibarr_set_const($db, 'HEADSUP_POPUP_LAYOUT', json_encode($clean), 'chaine', 0, '', $conf->entity);
+	setEventMessages($langs->trans('SetupSaved'), null, 'mesgs');
+	header('Location: '.$_SERVER['PHP_SELF']);
+	exit;
+}
 if ($action === 'setrefresh') {
 	$s = max(15, GETPOSTINT('HEADSUP_REFRESH_SECONDS'));
 	dolibarr_set_const($db, 'HEADSUP_REFRESH_SECONDS', (string) $s, 'chaine', 0, '', $conf->entity);
@@ -149,6 +173,151 @@ print '<td>'.ajax_constantonoff('HEADSUP_DEBUG_MODE').'</td>';
 print '<td class="opacitymedium">'.$langs->trans('DebugModeDesc').'</td></tr>';
 
 print '</table>';
+
+dol_include_once('/headsup/class/headsup.class.php');
+$layout = Headsup::popupLayout();
+$allfields = array(
+	'title'       => $langs->trans('HeadsupFieldTitle'),
+	'description' => $langs->trans('HeadsupFieldDescription'),
+	'screenshot'  => $langs->trans('HeadsupFieldScreenshot'),
+	'tags'        => $langs->trans('HeadsupFieldTags'),
+	'project'     => $langs->trans('HeadsupFieldProject'),
+);
+$aboveItems = array_values(array_filter($layout, function ($i) {
+	return $i['fold'] === 'above';
+}));
+$belowItems = array_values(array_filter($layout, function ($i) {
+	return $i['fold'] === 'below';
+}));
+
+print '<br>';
+print '<table class="noborder centpercent">';
+print '<tr class="liste_titre"><td colspan="2">'.dol_escape_htmltag($langs->trans('HeadsupPopupLayout')).'</td></tr>';
+print '<tr class="oddeven"><td colspan="2">';
+print '<p class="opacitymedium">'.dol_escape_htmltag($langs->trans('HeadsupPopupLayoutDesc')).'</p>';
+print '<form method="POST" action="'.$_SERVER['PHP_SELF'].'" id="headsup-layout-form" style="margin:0;">';
+print '<input type="hidden" name="token" value="'.newToken().'">';
+print '<input type="hidden" name="action" value="setpopuplayout">';
+print '<input type="hidden" name="HEADSUP_POPUP_LAYOUT" id="headsup-layout-data">';
+print '<ul id="headsup-layout-list" class="headsup-layout-list">';
+foreach ($aboveItems as $item) {
+	$key = $item['key'];
+	if (!isset($allfields[$key])) {
+		continue;
+	}
+	print '<li class="headsup-layout-item" data-key="'.dol_escape_htmltag($key).'" draggable="true">';
+	print '<span class="headsup-layout-handle" aria-hidden="true">&#8942;</span>';
+	print '<span class="headsup-layout-name">'.dol_escape_htmltag($allfields[$key]).'</span>';
+	print '<span class="headsup-layout-badge headsup-layout-above">'.dol_escape_htmltag($langs->trans('HeadsupAboveFold')).'</span>';
+	print '</li>';
+}
+print '<li class="headsup-layout-sep" data-key="_fold" draggable="true">';
+print '<span class="headsup-layout-sep-label">'.dol_escape_htmltag($langs->trans('HeadsupFoldSep')).'</span>';
+print '</li>';
+foreach ($belowItems as $item) {
+	$key = $item['key'];
+	if (!isset($allfields[$key])) {
+		continue;
+	}
+	print '<li class="headsup-layout-item" data-key="'.dol_escape_htmltag($key).'" draggable="true">';
+	print '<span class="headsup-layout-handle" aria-hidden="true">&#8942;</span>';
+	print '<span class="headsup-layout-name">'.dol_escape_htmltag($allfields[$key]).'</span>';
+	print '<span class="headsup-layout-badge headsup-layout-below">'.dol_escape_htmltag($langs->trans('HeadsupBelowFold')).'</span>';
+	print '</li>';
+}
+print '</ul>';
+print '<input type="submit" class="button smallpaddingimp" value="'.dol_escape_htmltag($langs->trans('Save')).'">';
+print '</form>';
+print '</td></tr>';
+print '</table>';
+
+print '<script nonce="'.getNonce().'">
+(function () {
+	var list = document.getElementById(\'headsup-layout-list\');
+	var input = document.getElementById(\'headsup-layout-data\');
+	if (!list || !input) { return; }
+	var dragging = null;
+	var placeholder = null;
+
+	function updateBadges() {
+		var pastFold = false;
+		for (var i = 0; i < list.children.length; i++) {
+			var item = list.children[i];
+			if (item === placeholder) { continue; }
+			if (item.dataset.key === \'_fold\') { pastFold = true; continue; }
+			var badge = item.querySelector(\'.headsup-layout-badge\');
+			if (badge) {
+				badge.className = \'headsup-layout-badge \' + (pastFold ? \'headsup-layout-below\' : \'headsup-layout-above\');
+				badge.textContent = pastFold ? \''.addslashes($langs->trans('HeadsupBelowFold')).'\' : \''.addslashes($langs->trans('HeadsupAboveFold')).'\';
+			}
+		}
+	}
+
+	function updateInput() {
+		var result = [];
+		var pastFold = false;
+		for (var i = 0; i < list.children.length; i++) {
+			var item = list.children[i];
+			if (item === placeholder) { continue; }
+			if (item.dataset.key === \'_fold\') { pastFold = true; continue; }
+			if (item.dataset.key) {
+				result.push({ key: item.dataset.key, fold: pastFold ? \'below\' : \'above\' });
+			}
+		}
+		input.value = JSON.stringify(result);
+	}
+
+	list.addEventListener(\'dragstart\', function (e) {
+		var target = e.target.closest(\'[draggable="true"]\');
+		if (!target || target.parentNode !== list) { return; }
+		dragging = target;
+		dragging.classList.add(\'headsup-layout-dragging\');
+		e.dataTransfer.effectAllowed = \'move\';
+		e.dataTransfer.setData(\'text/plain\', \'\');
+		placeholder = document.createElement(\'li\');
+		placeholder.className = \'headsup-layout-placeholder\';
+	});
+
+	list.addEventListener(\'dragover\', function (e) {
+		e.preventDefault();
+		e.dataTransfer.dropEffect = \'move\';
+		if (!dragging || !placeholder) { return; }
+		var target = e.target.closest(\'li\');
+		if (!target || target === dragging || target === placeholder || target.parentNode !== list) { return; }
+		var rect = target.getBoundingClientRect();
+		var midY = rect.top + rect.height / 2;
+		if (e.clientY < midY) {
+			if (target.previousSibling !== placeholder) { list.insertBefore(placeholder, target); }
+		} else {
+			if (target.nextSibling !== placeholder) { list.insertBefore(placeholder, target.nextSibling); }
+		}
+	});
+
+	list.addEventListener(\'drop\', function (e) {
+		e.preventDefault();
+		if (dragging && placeholder && placeholder.parentNode === list) {
+			list.insertBefore(dragging, placeholder);
+			placeholder.parentNode.removeChild(placeholder);
+			placeholder = null;
+		}
+	});
+
+	list.addEventListener(\'dragend\', function () {
+		if (dragging) {
+			dragging.classList.remove(\'headsup-layout-dragging\');
+			dragging = null;
+		}
+		if (placeholder && placeholder.parentNode) {
+			placeholder.parentNode.removeChild(placeholder);
+			placeholder = null;
+		}
+		updateBadges();
+		updateInput();
+	});
+
+	updateInput();
+})();
+</script>';
 
 llxFooter();
 $db->close();

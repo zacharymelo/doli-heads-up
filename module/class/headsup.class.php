@@ -84,6 +84,54 @@ class Headsup
 	}
 
 	/**
+	 * The popup's field order and fold assignment from HEADSUP_POPUP_LAYOUT.
+	 * Returns all five configurable keys (title, description, screenshot, tags, project)
+	 * in the saved order; any key missing from the saved config is appended above fold.
+	 *
+	 * @return array<array{key:string,fold:string}>
+	 */
+	public static function popupLayout()
+	{
+		$defaults = array(
+			array('key' => 'title',       'fold' => 'above'),
+			array('key' => 'description', 'fold' => 'above'),
+			array('key' => 'screenshot',  'fold' => 'above'),
+			array('key' => 'tags',        'fold' => 'above'),
+			array('key' => 'project',     'fold' => 'above'),
+		);
+		$raw = getDolGlobalString('HEADSUP_POPUP_LAYOUT');
+		if (!$raw) {
+			return $defaults;
+		}
+		$saved = json_decode($raw, true);
+		if (!is_array($saved)) {
+			return $defaults;
+		}
+		$validkeys = array('title', 'description', 'screenshot', 'tags', 'project');
+		$result = array();
+		$seen = array();
+		foreach ($saved as $item) {
+			if (!is_array($item) || !isset($item['key'], $item['fold'])) {
+				continue;
+			}
+			if (!in_array($item['key'], $validkeys, true) || !in_array($item['fold'], array('above', 'below'), true)) {
+				continue;
+			}
+			if (in_array($item['key'], $seen, true)) {
+				continue;
+			}
+			$result[] = array('key' => $item['key'], 'fold' => $item['fold']);
+			$seen[] = $item['key'];
+		}
+		foreach ($defaults as $def) {
+			if (!in_array($def['key'], $seen, true)) {
+				$result[] = $def;
+			}
+		}
+		return $result;
+	}
+
+	/**
 	 * Whether the popup shows the Project field (setup; off by default).
 	 *
 	 * @return bool

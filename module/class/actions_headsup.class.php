@@ -278,6 +278,7 @@ class ActionsHeadsup
 			'projectField' => Headsup::projectField() ? 1 : 0,
 			'screenshotEnabled' => getDolGlobalInt('HEADSUP_SCREENSHOT') > 0 ? 1 : 0,
 			'tagsUrl' => (isModEnabled('category') && $user->hasRight('categorie', 'lire')) ? dol_buildpath('/headsup/ajax/tags.php', 1) : '',
+			'popupLayout' => Headsup::popupLayout(),
 			'token' => newToken(),
 			'me' => (int) $user->id,
 			'canSend' => $user->hasRight('headsup', 'send') ? 1 : 0,
