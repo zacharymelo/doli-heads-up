@@ -88,6 +88,7 @@ The page is refused to non-admins and whenever Debug mode is off.
 - **No flag icon in the top bar:** check that the module is enabled. Then check that the user has the *Send* permission, or that the icon still shows the count without pick mode.
 - **Alt+click does nothing:** some operating systems or browser extensions use Alt+click themselves. Use pick mode from the flag icon instead.
 - **The Completed menu entry is missing after an upgrade:** turn the module off and on again.
+- **A new feature is missing after an upgrade, on one device only:** that browser is running a cached copy of the old script. From 0.3.22 the script is linked with its file date, so this should not happen again; for an older version, clear that browser's data for the site.
 - **An assignment created no to-do:** check these in order:
   - Assigning yourself never creates one.
   - Only internal contacts (users) count, not external contacts.

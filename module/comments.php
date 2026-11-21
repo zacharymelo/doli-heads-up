@@ -153,7 +153,7 @@ if (!$comments) {
 	print '<div class="headsup-thread-empty opacitymedium">'.$langs->trans('HeadsupNoComments').'</div>';
 }
 
-// Everyone who can be mentioned, for the list headsup.js shows after an @
+// Everyone who can be mentioned, for the list headsup-main.js shows after an @
 // (dol_escape_htmltag: dolPrintHTMLForAttribute would encode the JSON's quotes twice)
 $mentionable = array();
 foreach ($hu->activeUsers() as $activeuser) {

@@ -355,7 +355,7 @@ class Headsup
 
 	/**
 	 * The progress slider for a to-do: one stop per snap point and the state
-	 * it lands on. headsup.js updates the state while it moves and saves it
+	 * it lands on. headsup-main.js updates the state while it moves and saves it
 	 * when it is let go.
 	 *
 	 * @param int       $id      Event id

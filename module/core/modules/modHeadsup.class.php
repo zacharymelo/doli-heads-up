@@ -44,7 +44,7 @@ class modHeadsup extends DolibarrModules
 
 		$this->name = preg_replace('/^mod/i', '', get_class($this));
 		$this->description = "Alt+click anything to flag it for someone or report a problem; get a to-do when a record is assigned to you";
-		$this->version = '0.3.21';
+		$this->version = '0.3.22';
 		$this->editor_name = 'Zach Melo';
 		$this->editor_url = 'https://zachmelo.com';
 		$this->const_name = 'MAIN_MODULE_'.strtoupper($this->name);
@@ -56,7 +56,6 @@ class modHeadsup extends DolibarrModules
 			'substitutions' => 0,
 			'menus' => 0,
 			'hooks' => array('data' => array('main'), 'entity' => '0'),
-			'js' => array('/headsup/js/headsup.js'),
 			'css' => array('/headsup/css/headsup.css'),
 		);
 
@@ -226,6 +225,12 @@ class modHeadsup extends DolibarrModules
 			}
 			$pos++;
 		}
+
+		// Up to 0.3.21 the script was declared in module_parts, which core linked from the
+		// page head with no version. It is now linked from the footer (printCommonFooter).
+		// Core only clears the module_parts constants the descriptor still declares, so
+		// clear that one here, or js/headsup.js would stay linked forever.
+		$this->db->query("DELETE FROM ".MAIN_DB_PREFIX."const WHERE ".$this->db->decrypt('name')." = '".$this->db->escape($this->const_name)."_JS'");
 
 		return $this->_init(array(), $options);
 	}

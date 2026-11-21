@@ -242,7 +242,7 @@ class ActionsHeadsup
 	 * Event card, Modify form: on Heads-up to-dos, a "Linked object" field to link the to-do
 	 * to a record after it is sent (it may have none yet) or change it: search by ref or name,
 	 * or paste a record's link, or remove the link.
-	 * headsup.js puts it in place of core's read-only row.
+	 * headsup-main.js puts it in place of core's read-only row.
 	 *
 	 * @param array<string,mixed> $parameters  Hook parameters
 	 * @param ?object             $object      The event
@@ -372,7 +372,7 @@ class ActionsHeadsup
 	}
 
 	/**
-	 * Settings and the record on this page, for headsup.js.
+	 * Settings and the record on this page, for headsup-main.js.
 	 *
 	 * @param array<string,mixed> $parameters  Hook parameters
 	 * @param ?object             $object      Unused (null here; the page's record is the global $object)
@@ -455,6 +455,14 @@ class ActionsHeadsup
 		$cssfile = dol_buildpath('/headsup/css/headsup.css', 0);
 		if ($cssfile && is_file($cssfile)) {
 			$this->resprints .= '<link rel="stylesheet" type="text/css" href="'.dol_escape_htmltag(dol_buildpath('/headsup/css/headsup.css', 1).'?v='.filemtime($cssfile)).'">'."\n";
+		}
+
+		// The script, for the same reason, is linked here with the file's date rather than
+		// declared in module_parts (which links it from the head with no version). After
+		// window.HEADSUP, so it is there when the script runs.
+		$jsfile = dol_buildpath('/headsup/js/headsup-main.js', 0);
+		if ($jsfile && is_file($jsfile)) {
+			$this->resprints .= '<script nonce="'.getNonce().'" src="'.dol_escape_htmltag(dol_buildpath('/headsup/js/headsup-main.js', 1).'?v='.filemtime($jsfile)).'"></script>'."\n";
 		}
 		return 0;
 	}

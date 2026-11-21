@@ -254,7 +254,7 @@ if ($user->hasRight('headsup', 'readall')) {
 }
 print dol_get_fiche_head($head, $view, '', 1);
 
-// New to-do: about something outside Dolibarr, so nothing to click on (headsup.js opens the popup)
+// New to-do: about something outside Dolibarr, so nothing to click on (headsup-main.js opens the popup)
 $newtodobutton = '';
 if ($user->hasRight('headsup', 'send')) {
 	$newtodobutton = dolGetButtonAction('', $langs->trans('HeadsupNewTodo'), 'default', $_SERVER['PHP_SELF'].'?view='.$view.'&newtodo=1', 'headsup-new');

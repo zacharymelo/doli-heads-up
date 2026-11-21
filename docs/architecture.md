@@ -41,7 +41,7 @@ The slider stops at `0, 10, 25, 50, 75, 100`. `Headsup::setStatus()` and `Headsu
 
 ### Linking after creation
 
-The event's **Modify** form gets a **Linked object** field on Heads-up to-dos (the `formObjectOptions` hook), which `headsup.js` puts in place of core's read-only row (or, when nothing is linked, its list of the project's tasks). It links a to-do that has no record yet as well as one that has. It searches the records the user can open (`ajax/records.php`, `Headsup::searchRecords()`), takes a pasted link, or removes the link.
+The event's **Modify** form gets a **Linked object** field on Heads-up to-dos (the `formObjectOptions` hook), which `headsup-main.js` puts in place of core's read-only row (or, when nothing is linked, its list of the project's tasks). It links a to-do that has no record yet as well as one that has. It searches the records the user can open (`ajax/records.php`, `Headsup::searchRecords()`), takes a pasted link, or removes the link.
 
 On save, `ActionsHeadsup::prepareLink()` (the `doActions` hook, before core's update):
 
@@ -65,7 +65,7 @@ A to-do's comments are rows of core's `llx_comment`, the table project task comm
 - `Headsup::canComment()` decides who may read and write: whoever may change the state, plus anyone allowed to read every event. `comments.php` also lets in anyone mentioned in the conversation (`Headsup::isMentioned()`), and asks for no Agenda permission, like My queue.
 - The **Conversation** tab is added by the `completeTabsHead` hook, so it shows on Heads-up to-dos only and not on other events.
 - The `ACTION_DELETE` trigger deletes a to-do's comments with it.
-- `ajax/queue.php` also returns `latestComment`: the newest comment by someone else on a to-do the user sent or is assigned to. `headsup.js` shows it once as a browser notification.
+- `ajax/queue.php` also returns `latestComment`: the newest comment by someone else on a to-do the user sent or is assigned to. `headsup-main.js` shows it once as a browser notification.
 
 ### Mentions
 
@@ -75,7 +75,7 @@ A mention is `@login` in a comment's text. Nothing else is stored: who is mentio
 - `Headsup::countWaitingFor()` is the top bar number: `countOpenFor()` plus the to-dos with a waiting mention that it does not already count.
 - My queue adds those to-dos to **For me**, with the status controls only for people who may change the state.
 - `latestComment` in `ajax/queue.php` is the waiting mention when it is the newest, with `mention: 1`.
-- `comments.php` passes the active users in the form's `data-users`; `headsup.js` (`initMentions`) lists them after an `@`. `Headsup::formatMentions()` shows each `@login` as the person's name.
+- `comments.php` passes the active users in the form's `data-users`; `headsup-main.js` (`initMentions`) lists them after an `@`. `Headsup::formatMentions()` shows each `@login` as the person's name.
 
 ## Assignments
 
@@ -91,13 +91,22 @@ Both are skipped when the user assigns themselves or when **To-do on assignment*
 | Context | Hook | Does |
 |---|---|---|
 | `main` | `printTopRightMenu` | The flag icon, open count and its menu |
-| `main` | `printCommonFooter` | `window.HEADSUP`: URLs, token, rights, setup choices and the page's record |
+| `main` | `printCommonFooter` | `window.HEADSUP`: URLs, token, rights, setup choices and the page's record; then `headsup.css` and `headsup-main.js` with the file's date (see [Scripts and caching](#scripts-and-caching)) |
 | `main` | `doActions` | The event card's `action=headsup_status` links (checks the token and who may change it); on the Modify form's save, the linked object chosen there |
 | `main` | `formObjectOptions` | The **Linked object** field on a to-do's Modify form |
 | `main` | `addMoreActionsButtons` | The progress slider and **Status: …** button on the event card |
 | `main` | `completeTabsHead` | The **Conversation** tab on a to-do's event card, with the number of comments |
 
 Hooks provided for other modules: `headsupBeforeFlag` (context `headsupflag`) and `headsupTodoProject` (context `headsuptodo`). See the [integration guide](integration.md).
+
+## Scripts and caching
+
+Dolibarr links the stylesheets and scripts a module declares in `module_parts` from the page head, with no version in the address. After an update, browsers (Safari above all) keep using the copy they cached. So:
+
+- `headsup.css` is declared, and linked again by `printCommonFooter` with `?v=` and the file's date.
+- `headsup-main.js` is not declared. `printCommonFooter` links it with the file's date, after `window.HEADSUP`.
+- Up to 0.3.21 the script was `js/headsup.js`, declared in `module_parts`. Installs keep that link (the `MAIN_MODULE_HEADSUP_JS` constant) until the module is turned off and on, so the file stays as a placeholder that only sets `window.HEADSUP_STUB`. `modHeadsup::init()` deletes the constant, since core only clears the constants of parts the descriptor still declares.
+- If `headsup-main.js` finds the head's `headsup.js` but no `HEADSUP_STUB`, a cached copy of the old full script has already run. It re-fetches that file with `cache: 'reload'` and reloads the page once (a `sessionStorage` flag stops a loop) rather than doubling every handler.
 
 ## Files
 
@@ -120,7 +129,8 @@ module/
 │   └── triggers/interface_99_modHeadsup_HeadsupTrigger.class.php   Assignment to-dos; comments of a deleted to-do; a link set on the Modify form
 ├── comments.php                         Conversation tab of a to-do's event card
 ├── css/headsup.css                      Popup, queue, slider, conversation, cards on small screens
-├── js/headsup.js                        Alt+click, pick mode, popup, notifications, queue controls
+├── js/headsup-main.js                   Alt+click, pick mode, popup, notifications, queue controls, Linked object field
+├── js/headsup.js                        Placeholder for installs that still link the pre-0.3.22 script (see below)
 ├── langs/en_US/headsup.lang             Translations
 └── queue.php                            My queue page and its tabs
 ```

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.22
+
+- **Updates reach browsers that cached the old script.** Dolibarr links a module's script from the page head with no version in its address, so after an update Safari, on iPhone above all, kept running the old copy: in 0.3.21 the **Linked object** field showed its help text but no search box. The script is now `js/headsup-main.js`, linked from the page footer with the file's date, as the stylesheet already was.
+- The first page loaded after updating may reload itself once, when the browser still runs the old cached script, so the old and new scripts never both run.
+- Turning the module off and on is not needed. Doing so stops Dolibarr linking the old `js/headsup.js`, which is now an empty placeholder.
+
 ## 0.3.21
 
 - **Link a to-do to a record after it is sent**, whether it has none yet (a **New to-do**, or a flag sent from a page with no record) or should point somewhere else. A to-do's **Modify** form now has a **Linked object** field in place of core's read-only one: search by ref or name (invoices, orders, proposals, projects, tasks, third parties, contacts, products and more), or paste the record's address. The **×** removes the link. Only records you can open are offered, and the same check runs again on save.

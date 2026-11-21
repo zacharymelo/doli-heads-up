@@ -52,7 +52,7 @@ window.HeadsupOpen({
 });
 ```
 
-`HeadsupOpen` does nothing for users without the *Send* permission.
+`HeadsupOpen` does nothing for users without the *Send* permission. It is defined by the script Heads-up links at the end of the page (from 0.3.22; earlier, in the head), so call it from a click handler or after `DOMContentLoaded`, not from an inline script that runs while the page loads.
 
 ### The `headsup:sent` event
 
@@ -163,7 +163,7 @@ $id = $hu->createTodo(
 
 ## AJAX endpoints
 
-These are used by `headsup.js`. They answer in JSON and need a logged-in session. Every POST needs the CSRF `token`.
+These are used by `headsup-main.js`. They answer in JSON and need a logged-in session. Every POST needs the CSRF `token`.
 
 | Endpoint | Method | Purpose |
 |---|---|---|
