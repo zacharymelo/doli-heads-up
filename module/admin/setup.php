@@ -140,6 +140,10 @@ print ' <input type="submit" class="button smallpaddingimp" value="'.$langs->tra
 print '</form></td>';
 print '<td class="opacitymedium">'.$langs->trans('HeadsupRefreshSecondsDesc').'</td></tr>';
 
+print '<tr class="oddeven"><td>'.$langs->trans('HeadsupScreenshot').'</td>';
+print '<td>'.ajax_constantonoff('HEADSUP_SCREENSHOT').'</td>';
+print '<td class="opacitymedium">'.$langs->trans('HeadsupScreenshotDesc').'</td></tr>';
+
 print '<tr class="oddeven"><td>'.$langs->trans('DebugMode').'</td>';
 print '<td>'.ajax_constantonoff('HEADSUP_DEBUG_MODE').'</td>';
 print '<td class="opacitymedium">'.$langs->trans('DebugModeDesc').'</td></tr>';

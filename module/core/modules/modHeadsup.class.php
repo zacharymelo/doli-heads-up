@@ -77,6 +77,7 @@ class modHeadsup extends DolibarrModules
 			array('HEADSUP_USERS_SHOW_ALL', 'chaine', '0', 'Show every user as a button in the popup (off: search and short list only)', 0, 'current', 0),
 			array('HEADSUP_SHORTLIST', 'chaine', '', 'Users shown as quick choices in the popup (comma-separated ids)', 0, 'current', 0),
 			array('HEADSUP_REFRESH_SECONDS', 'chaine', '60', 'How often the top bar count refreshes', 0, 'current', 0),
+			array('HEADSUP_SCREENSHOT', 'chaine', '0', 'Allow attaching a screenshot and click position to flags and problem reports', 0, 'current', 0),
 		);
 
 		// Permissions

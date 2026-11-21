@@ -109,3 +109,12 @@ HeadsupDeleteCommentConfirm = Delete this comment? It cannot be brought back.
 HeadsupCommentDeleted = Comment deleted
 HeadsupMentionedYou = %s mentioned you
 HeadsupMentionHint = Type @ to mention someone. It stays in their queue until they reply.
+
+# Screenshot feature
+HeadsupScreenshot = Screenshot
+HeadsupScreenshotDesc = When on, the flag popup has a "Take screenshot" button. The screenshot and click position are stored with the to-do. Requires the browser to allow screen sharing for this site.
+HeadsupScreenshotView = View screenshot
+HeadsupScreenshotCapture = Take screenshot
+HeadsupScreenshotRetake = Retake
+HeadsupScreenshotRemove = Remove
+HeadsupScreenshotHint = Captures the current tab. The browser will ask you to allow screen sharing.

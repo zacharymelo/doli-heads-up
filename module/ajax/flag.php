@@ -90,6 +90,12 @@ $clickedelement = GETPOST('clickedelement', 'aZ09arobase');
 $clickedid = GETPOSTINT('clickedid');
 $confirmed = GETPOSTINT('confirm');
 $project = GETPOSTINT('project');	// the sender's choice: a project id, -1 for none, 0 automatic
+$clickx = GETPOSTINT('clickx');
+$clicky = GETPOSTINT('clicky');
+$vw = GETPOSTINT('vw');
+$vh = GETPOSTINT('vh');
+// Screenshot: only accepted when the feature is enabled; validated below
+$screenshotData = '';
 
 if ($title === '') {
 	headsup_reply(400, array('ok' => 0, 'error' => 'A title is needed'));
@@ -161,7 +167,20 @@ if ($project !== 0) {
 	$options['project'] = $project;
 }
 
+if (getDolGlobalInt('HEADSUP_SCREENSHOT') > 0) {
+	$raw = GETPOST('screenshot', 'none');
+	if (is_string($raw) && preg_match('/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+\/]+=*$/', $raw) && strlen($raw) <= 2000000) {
+		$screenshotData = $raw;
+	}
+}
+
 $context = array('page' => $page, 'box' => $box, 'clicked' => $clicked);
+if ($screenshotData !== '' && $clickx > 0 && $clicky > 0) {
+	$context['clickx'] = $clickx;
+	$context['clicky'] = $clicky;
+	$context['vw'] = $vw;
+	$context['vh'] = $vh;
+}
 if ($clickedrecord) {
 	$context['record'] = Headsup::recordLabel($clickedrecord).' ('.$clickedelement.' #'.((int) $clickedrecord->id).')';
 	$context['recordurl'] = Headsup::recordUrl($clickedrecord);
@@ -171,6 +190,10 @@ $note = Headsup::buildNote($description, $context);
 $id = $hu->createTodo($user, $code, $userids, $title, $note, $mainrecord, $secondaryrecord, $options);
 if ($id <= 0) {
 	headsup_reply(500, array('ok' => 0, 'error' => $hu->error ? $hu->error : 'Could not save'));
+}
+
+if ($screenshotData !== '') {
+	$hu->addScreenshotToTodo($user, $id, $screenshotData);
 }
 
 headsup_reply(200, array('ok' => 1, 'id' => $id, 'count' => $hu->countWaitingFor($user)));

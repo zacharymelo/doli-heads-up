@@ -1150,7 +1150,7 @@ class Headsup
 	 * (core shows the note through dol_htmlentitiesbr + dol_string_onlythesehtmltags, which keep <a href>).
 	 *
 	 * @param string $description What the user wrote (plain text)
-	 * @param array{page?:string,box?:string,clicked?:string,record?:string,recordurl?:string} $context page (path inside Dolibarr), box, clicked, record (label), recordurl
+	 * @param array{page?:string,box?:string,clicked?:string,record?:string,recordurl?:string,clickx?:int,clicky?:int,vw?:int,vh?:int} $context page (path inside Dolibarr), box, clicked, record (label), recordurl, click coordinates
 	 * @return string
 	 */
 	public static function buildNote($description, $context)
@@ -1173,10 +1173,104 @@ class Headsup
 			$url = isset($context['recordurl']) ? (string) $context['recordurl'] : '';
 			$lines[] = 'Linked to: '.($url !== '' && $url[0] === '/' ? '<a href="'.dol_escape_htmltag($url).'">'.$label.'</a>' : $label);
 		}
+		if (isset($context['clickx']) && (int) $context['clickx'] > 0 && isset($context['clicky']) && (int) $context['clicky'] > 0) {
+			$lines[] = 'Click: '.((int) $context['clickx']).'px, '.((int) $context['clicky']).'px'
+				.((!empty($context['vw']) && !empty($context['vh'])) ? ' (viewport '.((int) $context['vw']).' × '.((int) $context['vh']).')' : '');
+		}
 		if ($lines) {
 			$note .= ($note !== '' ? '<br><br>' : '').'-- Heads-up context --<br>'.implode('<br>', $lines);
 		}
 		return $note;
+	}
+
+	/**
+	 * Save a screenshot (base64 data URL) to disk for a to-do.
+	 *
+	 * @param int    $id   Event id
+	 * @param string $data Data URL (data:image/jpeg;base64,...)
+	 * @return bool
+	 */
+	public function saveScreenshot($id, $data)
+	{
+		global $conf;
+
+		$matches = array();
+		if (!preg_match('/^data:image\/(jpeg|png|webp);base64,([A-Za-z0-9+\/]+=*)$/', (string) $data, $matches)) {
+			return false;
+		}
+		$ext = $matches[1] === 'jpeg' ? 'jpg' : $matches[1];
+		$decoded = base64_decode($matches[2]);
+		if ($decoded === false || strlen($decoded) < 100) {
+			return false;
+		}
+		$dir = DOL_DATA_ROOT.'/headsup/'.(int) $conf->entity.'/'.(int) $id;
+		if (!dol_mkdir($dir)) {
+			return false;
+		}
+		$file = $dir.'/screenshot.'.$ext;
+		return file_put_contents($file, $decoded) !== false;
+	}
+
+	/**
+	 * Path on disk to the screenshot for a to-do, or '' if none.
+	 *
+	 * @param int $id Event id
+	 * @return string
+	 */
+	public function screenshotPath($id)
+	{
+		global $conf;
+
+		foreach (array('jpg', 'png', 'webp') as $ext) {
+			$f = DOL_DATA_ROOT.'/headsup/'.(int) $conf->entity.'/'.(int) $id.'/screenshot.'.$ext;
+			if (is_file($f)) {
+				return $f;
+			}
+		}
+		return '';
+	}
+
+	/**
+	 * URL to view the screenshot for a to-do (served by ajax/screenshotview.php).
+	 *
+	 * @param int $id Event id
+	 * @return string
+	 */
+	public function screenshotUrl($id)
+	{
+		return dol_buildpath('/headsup/ajax/screenshotview.php', 1).'?id='.((int) $id);
+	}
+
+	/**
+	 * Save a screenshot and append a link to it in a to-do's note.
+	 *
+	 * @param User   $user           User who sent the flag
+	 * @param int    $id             Event id
+	 * @param string $screenshotData Base64 data URL
+	 * @return void
+	 */
+	public function addScreenshotToTodo($user, $id, $screenshotData)
+	{
+		global $langs;
+
+		if (!$this->saveScreenshot($id, $screenshotData)) {
+			return;
+		}
+		$ac = new ActionComm($this->db);
+		if ($ac->fetch((int) $id) <= 0) {
+			return;
+		}
+		$langs->load('headsup@headsup');
+		$url = $this->screenshotUrl($id);
+		$link = '<a href="'.dol_escape_htmltag($url).'">'.dol_escape_htmltag($langs->transnoentitiesnoconv('HeadsupScreenshotView')).'</a>';
+		$note = (string) $ac->note_private;
+		if ($note === '' || dol_textishtml($note)) {
+			$note .= ($note !== '' ? '<br>' : '').dol_escape_htmltag($langs->transnoentitiesnoconv('HeadsupScreenshot')).': '.$link;
+		} else {
+			$note .= "\n".$langs->transnoentitiesnoconv('HeadsupScreenshot').': '.$url;
+		}
+		$ac->note_private = $note;
+		$ac->update($user);
 	}
 
 	/**

@@ -276,6 +276,7 @@ class ActionsHeadsup
 			'resolveUrl' => dol_buildpath('/headsup/ajax/resolve.php', 1),
 			'projectsUrl' => dol_buildpath('/headsup/ajax/projects.php', 1),
 			'projectField' => Headsup::projectField() ? 1 : 0,
+			'screenshotEnabled' => getDolGlobalInt('HEADSUP_SCREENSHOT') > 0 ? 1 : 0,
 			'token' => newToken(),
 			'me' => (int) $user->id,
 			'canSend' => $user->hasRight('headsup', 'send') ? 1 : 0,

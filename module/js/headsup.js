@@ -285,7 +285,9 @@
 		var context = {
 			page: standalone ? '' : (opts.page || (window.location.pathname + window.location.search)),
 			box: target ? boxTitle(target) : (opts.box || ''),
-			clicked: target ? clickedText(target) : ''
+			clicked: target ? clickedText(target) : '',
+			clickx: x || 0,
+			clicky: y || 0
 		};
 		var record = standalone ? null : (opts.record || c.record);
 		var clickedRecord = null;
@@ -295,6 +297,7 @@
 
 		var kind = 'todo';
 		var selected = {};
+		var screenshotDataUrl = null;
 
 		var tabTodo = el('button', { type: 'button', className: 'headsup-tab headsup-tab-on', text: 'To-do' });
 		var tabProblem = el('button', { type: 'button', className: 'headsup-tab', text: 'Report a problem' });
@@ -327,6 +330,98 @@
 		var send = el('button', { type: 'submit', className: 'button headsup-send', text: 'Send' });
 		var cancel = el('button', { type: 'button', className: 'button button-cancel headsup-cancel', text: 'Cancel' });
 
+		/* Screenshot section: shown only when the admin has enabled the feature and
+		 * the browser supports getDisplayMedia (screen capture API). The user must
+		 * click "Take screenshot" explicitly; nothing is captured automatically. */
+		var screenshotBox = null;
+		var screenshotBtn = null;
+		var screenshotPreview = null;
+		var screenshotThumb = null;
+		var screenshotRemove = null;
+		if (c.screenshotEnabled && window.navigator.mediaDevices && window.navigator.mediaDevices.getDisplayMedia) {
+			screenshotBtn = el('button', { type: 'button', className: 'headsup-screenshot-btn', text: 'Take screenshot' });
+			screenshotPreview = el('div', { className: 'headsup-screenshot-preview' });
+			screenshotPreview.hidden = true;
+			screenshotBox = el('div', { className: 'headsup-screenshot' }, [
+				el('div', { className: 'headsup-screenshot-hint', text: 'The browser will ask you to allow screen sharing.' }),
+				screenshotBtn,
+				screenshotPreview
+			]);
+
+			function renderScreenshotPreview() {
+				screenshotPreview.textContent = '';
+				if (!screenshotDataUrl) {
+					screenshotPreview.hidden = true;
+					screenshotBtn.textContent = 'Take screenshot';
+					return;
+				}
+				screenshotThumb = el('img', { className: 'headsup-screenshot-thumb', src: screenshotDataUrl, alt: 'Screenshot preview' });
+				screenshotThumb.addEventListener('click', function () {
+					var w = window.open('', '_blank');
+					if (w) {
+						w.document.write('<img src="' + screenshotDataUrl + '" style="max-width:100%">');
+					}
+				});
+				screenshotRemove = el('button', { type: 'button', className: 'headsup-screenshot-remove', text: 'Remove' });
+				screenshotRemove.addEventListener('click', function () {
+					screenshotDataUrl = null;
+					renderScreenshotPreview();
+					place();
+				});
+				screenshotPreview.appendChild(screenshotThumb);
+				screenshotPreview.appendChild(screenshotRemove);
+				screenshotPreview.hidden = false;
+				screenshotBtn.textContent = 'Retake';
+				place();
+			}
+
+			screenshotBtn.addEventListener('click', function () {
+				screenshotBtn.disabled = true;
+				screenshotBtn.textContent = 'Opening screen share…';
+				/* Hide the popup before the capture starts so it does not appear
+				 * in the screenshot. Restored after capture or on cancel/error. */
+				if (popup) { popup.style.visibility = 'hidden'; }
+				navigator.mediaDevices.getDisplayMedia({ video: { displaySurface: 'browser' }, preferCurrentTab: true, audio: false })
+					.then(function (stream) {
+						var video = document.createElement('video');
+						video.srcObject = stream;
+						function captureFrame() {
+							var canvas = document.createElement('canvas');
+							var maxW = 1280;
+							var w = Math.min(video.videoWidth || maxW, maxW);
+							var h = video.videoWidth ? Math.round(video.videoHeight * w / video.videoWidth) : 720;
+							canvas.width = w;
+							canvas.height = h;
+							canvas.getContext('2d').drawImage(video, 0, 0, w, h);
+							stream.getTracks().forEach(function (t) { t.stop(); });
+							if (popup) { popup.style.visibility = ''; }
+							screenshotDataUrl = canvas.toDataURL('image/jpeg', 0.75);
+							screenshotBtn.disabled = false;
+							renderScreenshotPreview();
+						}
+						video.onloadedmetadata = function () {
+							video.play();
+							if (video.requestVideoFrameCallback) {
+								video.requestVideoFrameCallback(captureFrame);
+							} else {
+								setTimeout(captureFrame, 150);
+							}
+						};
+						video.onerror = function () {
+							stream.getTracks().forEach(function (t) { t.stop(); });
+							if (popup) { popup.style.visibility = ''; }
+							screenshotBtn.disabled = false;
+							screenshotBtn.textContent = screenshotDataUrl ? 'Retake' : 'Take screenshot';
+						};
+					})
+					.catch(function () {
+						if (popup) { popup.style.visibility = ''; }
+						screenshotBtn.disabled = false;
+						screenshotBtn.textContent = screenshotDataUrl ? 'Retake' : 'Take screenshot';
+					});
+			});
+		}
+
 		var where = [];
 		if (record && record.label) {
 			where.push('On: ' + record.label);
@@ -358,6 +453,8 @@
 			title,
 			el('label', { className: 'headsup-label', text: 'Description' }),
 			desc,
+			screenshotBox ? el('label', { className: 'headsup-label', text: 'Screenshot' }) : null,
+			screenshotBox,
 			projectBox ? el('label', { className: 'headsup-label', text: 'Project' }) : null,
 			projectBox,
 			el('div', { className: 'headsup-actions' }, [cancel, send])
@@ -565,6 +662,15 @@
 			body.append('page', context.page);
 			body.append('box', context.box);
 			body.append('clicked', context.clicked);
+			if (c.screenshotEnabled) {
+				body.append('clickx', String(Math.round(context.clickx || 0)));
+				body.append('clicky', String(Math.round(context.clicky || 0)));
+				body.append('vw', String(window.innerWidth));
+				body.append('vh', String(window.innerHeight));
+				if (screenshotDataUrl) {
+					body.append('screenshot', screenshotDataUrl);
+				}
+			}
 			if (record) {
 				body.append('element', record.element);
 				body.append('elementid', String(record.id));
