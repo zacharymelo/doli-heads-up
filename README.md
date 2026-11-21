@@ -9,6 +9,7 @@ Heads-up adds **no database tables**. Every flag is a native Dolibarr agenda eve
 - **Flag anything**: Alt+click (Option+click on a Mac) any element, or use pick mode from the flag icon in the top bar. Assign it to one or more people with a title and a description.
 - **Report a problem**: a second tab in the same popup, sent by default to the person chosen in setup, with the title filled in from the box that was clicked.
 - **Knows the record**: the link (or table row) that was clicked becomes the to-do's main record, with its third party and project. The page's own record fills in what is still empty.
+- **Link it later**: a to-do's Modify form has a searchable **Linked object** field, to link it to a record after it is sent, whether it has none yet or should point elsewhere.
 - **Assignment to-dos**: when someone adds a user as an internal contact on a project, task, proposal, order or invoice, or as a third party's sales representative, that user gets a to-do.
 - **My queue**: tabs for *For me*, *Assigned to me*, *Sent by me*, *Completed* and *Everyone's open flags*, with a progress slider and a status picker on each row. On a phone, each to-do is shown as a card.
 - **Four states** (to do, acknowledged, in progress, done) kept in the event's percent, so Dolibarr's agenda agrees. Each change is logged on the event.

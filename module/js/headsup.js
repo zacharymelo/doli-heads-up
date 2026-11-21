@@ -1302,6 +1302,149 @@
 
 	document.addEventListener('DOMContentLoaded', initMentions);
 
+	/* ---------- "Linked object" on a to-do's Modify form ---------- */
+
+	/* The field ActionsHeadsup::formObjectOptions() prints: the linked record as a
+	 * chip, or "Not linked to a record" (× removes the link), and a search by ref or
+	 * name, or a pasted link, to pick one: a first record or another. It takes the place of core's own "Linked object" row, which
+	 * is read-only (or only lists the project's tasks). Saving the form applies it. */
+	function initRelink() {
+		var box = document.querySelector('.headsup-relink');
+		if (!box) {
+			return;
+		}
+		var t = {};
+		var original = null;
+		try {
+			t = JSON.parse(box.getAttribute('data-i18n') || '{}') || {};
+			original = JSON.parse(box.getAttribute('data-current') || 'null');
+		} catch (e) {
+			return;
+		}
+		var chosen = original;
+		var form = box.closest('form');
+		var row = box.closest('tr');
+		var relink = box.querySelector('input[name="headsup_relink"]');
+		var elementInput = box.querySelector('input[name="headsup_link_element"]');
+		var idInput = box.querySelector('input[name="headsup_link_id"]');
+		var chipBox = box.querySelector('.headsup-chosen');
+		var filter = el('input', { type: 'search', className: 'headsup-filter headsup-relink-filter', placeholder: t.search || '', 'aria-label': t.search || '' });
+		var list = el('div', { className: 'headsup-users' });
+		box.appendChild(filter);
+		box.appendChild(list);
+
+		/* Core's row: ours goes in its place, and its fields no longer post */
+		if (form && row) {
+			var coreRow = null;
+			Array.prototype.forEach.call(form.querySelectorAll('[name="elementtype"], [name="fk_element"], [name="taskid"], #project-task-input-container'), function (n) {
+				var tr = n.closest('tr');
+				if (!coreRow && tr && tr !== row && !box.contains(n)) {
+					coreRow = tr;
+				}
+			});
+			if (coreRow) {
+				coreRow.parentNode.insertBefore(row, coreRow);
+				coreRow.hidden = true;
+				Array.prototype.forEach.call(coreRow.querySelectorAll('input, select'), function (n) {
+					n.disabled = true;
+				});
+			} else {
+				/* Core shows none when nothing is linked: after the project, where it would be */
+				var project = form.querySelector('[name="projectid"]');
+				var projectRow = project ? project.closest('tr') : null;
+				if (projectRow && projectRow.parentNode === row.parentNode) {
+					projectRow.parentNode.insertBefore(row, projectRow.nextSibling);
+				}
+			}
+		}
+
+		function same(a, b) {
+			return (!a && !b) || (!!a && !!b && a.element === b.element && parseInt(a.id, 10) === parseInt(b.id, 10));
+		}
+
+		function render() {
+			chipBox.textContent = '';
+			if (chosen) {
+				var chip = el('span', { className: 'headsup-chip', text: chosen.label });
+				var x = el('button', { type: 'button', className: 'headsup-chip-x', 'aria-label': t.remove || '', title: t.remove || '', text: '×' });
+				x.addEventListener('click', function () {
+					choose(null);
+				});
+				chip.appendChild(x);
+				chipBox.appendChild(chip);
+			} else {
+				chipBox.appendChild(el('span', { className: 'opacitymedium', text: t.nothing || '' }));
+			}
+			if (!same(chosen, original)) {
+				var undo = el('button', { type: 'button', className: 'headsup-user headsup-relink-undo', text: t.undo || '' });
+				undo.addEventListener('click', function () {
+					choose(original);
+				});
+				chipBox.appendChild(undo);
+			}
+			elementInput.value = chosen ? chosen.element : '';
+			idInput.value = chosen ? String(parseInt(chosen.id, 10)) : '0';
+			relink.value = same(chosen, original) ? '0' : '1';
+		}
+
+		function choose(choice) {
+			chosen = choice;
+			filter.value = '';
+			list.textContent = '';
+			seq++;
+			render();
+		}
+
+		var timer = 0;
+		var seq = 0;
+		filter.addEventListener('input', function () {
+			clearTimeout(timer);
+			var q = filter.value.trim();
+			if (q.length < 2) {
+				seq++;
+				list.textContent = '';
+				return;
+			}
+			timer = setTimeout(function () {
+				var mine = ++seq;
+				fetch(box.getAttribute('data-url') + '?q=' + encodeURIComponent(q), { credentials: 'same-origin' })
+					.then(function (r) { return r.json(); })
+					.then(function (data) {
+						if (mine !== seq) {
+							return;
+						}
+						list.textContent = '';
+						var records = (data && data.records) || [];
+						records.forEach(function (r) {
+							var b = el('button', { type: 'button', className: 'headsup-user', text: (r.type ? r.type + ': ' : '') + r.label });
+							b.addEventListener('click', function () {
+								choose(r);
+							});
+							list.appendChild(b);
+						});
+						if (!records.length) {
+							list.appendChild(el('span', { className: 'opacitymedium', text: t.noMatch || '' }));
+						}
+					})
+					.catch(function () {});
+			}, 250);
+		});
+		/* Enter picks the first result instead of saving the form */
+		filter.addEventListener('keydown', function (e) {
+			if (e.key === 'Enter') {
+				e.preventDefault();
+				var first = list.querySelector('button');
+				if (first) {
+					first.click();
+				}
+			}
+		});
+
+		render();
+	}
+
+	document.addEventListener('DOMContentLoaded', initRelink);
+
 	/* Opens the popup from another module, already filled in. Every field is optional:
 	 *   x, y         where to show it (viewport pixels; default: near the top right)
 	 *   record       {element, id, label}: what it is about, e.g. 'myobject@mymodule'

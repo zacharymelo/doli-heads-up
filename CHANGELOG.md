@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.21
+
+- **Link a to-do to a record after it is sent**, whether it has none yet (a **New to-do**, or a flag sent from a page with no record) or should point somewhere else. A to-do's **Modify** form now has a **Linked object** field in place of core's read-only one: search by ref or name (invoices, orders, proposals, projects, tasks, third parties, contacts, products and more), or paste the record's address. The **×** removes the link. Only records you can open are offered, and the same check runs again on save.
+- Saving takes the record's third party and project, as a new flag on it would, unless you changed those fields in the same form. The description gets a line saying who linked it and when.
+
 ## 0.3.16
 
 - **The popup can be moved out of the way.** Drag it by its title bar to see whatever it covers. It stays on the screen however far you drag, keeps the place you put it when the form grows, and goes back there after the window has been narrow enough for the popup to fill the screen. On a phone it still fills the screen, so there is nothing to drag.

@@ -41,6 +41,15 @@ The server matches these links against Dolibarr's card and tab URLs. It covers p
 
 The clicked record becomes the to-do's main link, so the to-do appears on that record's **Events** tab, along with its project and third party. The record whose card you were on fills in whatever is still empty. The note also says, for example, "Linked to: PJ2611-0042 … (project #42)".
 
+### Linking it to a record later
+
+A to-do can be linked to a record after it is sent: one that has none yet (a **New to-do**, or a flag sent from a page with no record), or one that should point somewhere else. Open its event card and click **Modify**. The **Linked object** field shows what it is linked to, or "Not linked to a record":
+
+- Type part of a ref or a name (an invoice number, a third party, a contact, a project…) and pick the record. Only records you can open are listed. You can also paste the record's address from your browser.
+- The **×** removes the link. **Keep the current link** undoes your change.
+
+When you save, the to-do shows on that record's Events tab and takes its third party and project, as a new flag on it would, unless you changed those fields yourself in the same form. Picking a contact also makes them the event's contact. The description gets a line such as "Linked to IN2611-0002 by Alex Martin, 11/21/2026 6:39 PM".
+
 On the event card, the context is clickable:
 
 - **Page** opens the exact page the flag was sent from.

@@ -268,6 +268,20 @@ html.headsup-picking * {
 	font-size: 1.1em;
 	line-height: 1;
 }
+/* "Linked object" on a to-do's Modify form */
+.headsup-relink .headsup-chosen {
+	align-items: center;
+}
+.headsup-relink-filter {
+	max-width: 500px;
+	margin-top: 4px;
+}
+.headsup-relink-undo {
+	font-style: italic;
+}
+.headsup-relink-help {
+	margin-top: 4px;
+}
 .headsup-actions {
 	display: flex;
 	justify-content: flex-end;

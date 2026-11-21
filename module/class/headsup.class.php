@@ -39,6 +39,14 @@ class Headsup
 	/** @var string[] */
 	public $errors = array();
 
+	/**
+	 * Linked records to set when an event is saved, by event id: the Modify form's
+	 * "Linked object" field, applied by the ACTION_MODIFY trigger.
+	 *
+	 * @var array<int,array{element:string,id:int}>
+	 */
+	public static $pendingLinks = array();
+
 	/** @var array<int,array<int,array{id:int,todo:int,label:string,from:string,mention:int}>> openMentionsFor() results, by user id */
 	private $openmentions = array();
 
@@ -710,6 +718,233 @@ class Headsup
 			}
 		}
 		return trim($ref.($extra !== '' ? ' '.$extra : ''));
+	}
+
+	/**
+	 * Element name a record is linked by: 'myobject@mymodule' for custom modules.
+	 *
+	 * @param object $obj Record
+	 * @return string
+	 */
+	public static function elementOf($obj)
+	{
+		$element = isset($obj->element) ? (string) $obj->element : '';
+		$mod = (!empty($obj->module) && is_string($obj->module)) ? $obj->module : '';
+		if ($element !== '' && $mod !== '' && is_dir(DOL_DOCUMENT_ROOT.'/custom/'.$mod) && !is_dir(DOL_DOCUMENT_ROOT.'/'.$mod)) {
+			$element .= '@'.$mod;
+		}
+		return $element;
+	}
+
+	/**
+	 * Kinds of record the Modify form's "Linked object" search looks through: element => module, table,
+	 * fields searched, the entity element, the read permissions (any one will do), how core checks
+	 * access to one record (checkUserAccessToObject's feature, table, feature2, third party field)
+	 * and the name of the kind.
+	 *
+	 * @return array<string,array{module:string,table:string,search:string[],entity:string,rights:array<int,string[]>,features:string,tableandshare:string,feature2:string,keyfield:string,name:string}>
+	 */
+	public static function linkTypes()
+	{
+		return array(
+			'project' => array('module' => 'project', 'table' => 'projet', 'search' => array('ref', 'title'), 'entity' => 'project', 'rights' => array(array('projet', 'lire')), 'features' => 'projet', 'tableandshare' => 'projet&project', 'feature2' => '', 'keyfield' => '', 'name' => 'Project'),
+			'project_task' => array('module' => 'project', 'table' => 'projet_task', 'search' => array('ref', 'label'), 'entity' => 'project', 'rights' => array(array('projet', 'lire')), 'features' => 'projet', 'tableandshare' => '', 'feature2' => '', 'keyfield' => '', 'name' => 'Task'),
+			'societe' => array('module' => 'societe', 'table' => 'societe', 'search' => array('nom', 'name_alias', 'code_client', 'code_fournisseur'), 'entity' => 'societe', 'rights' => array(array('societe', 'lire')), 'features' => 'societe', 'tableandshare' => '&societe', 'feature2' => '', 'keyfield' => 'fk_soc', 'name' => 'ThirdParty'),
+			'contact' => array('module' => 'societe', 'table' => 'socpeople', 'search' => array('lastname', 'firstname', 'email'), 'entity' => 'contact', 'rights' => array(array('societe', 'contact', 'lire')), 'features' => 'contact', 'tableandshare' => 'socpeople&societe', 'feature2' => '', 'keyfield' => '', 'name' => 'Contact'),
+			'propal' => array('module' => 'propal', 'table' => 'propal', 'search' => array('ref', 'ref_client'), 'entity' => 'propal', 'rights' => array(array('propal', 'lire')), 'features' => 'propal', 'tableandshare' => '', 'feature2' => '', 'keyfield' => 'fk_soc', 'name' => 'Proposal'),
+			'commande' => array('module' => 'order', 'table' => 'commande', 'search' => array('ref', 'ref_client'), 'entity' => 'commande', 'rights' => array(array('commande', 'lire')), 'features' => 'commande', 'tableandshare' => '', 'feature2' => '', 'keyfield' => 'fk_soc', 'name' => 'Order'),
+			'facture' => array('module' => 'invoice', 'table' => 'facture', 'search' => array('ref', 'ref_client'), 'entity' => 'invoice', 'rights' => array(array('facture', 'lire')), 'features' => 'facture', 'tableandshare' => '', 'feature2' => '', 'keyfield' => 'fk_soc', 'name' => 'Invoice'),
+			'order_supplier' => array('module' => 'supplier_order', 'table' => 'commande_fournisseur', 'search' => array('ref', 'ref_supplier'), 'entity' => 'supplier_order', 'rights' => array(array('fournisseur', 'commande', 'lire'), array('supplier_order', 'lire')), 'features' => 'fournisseur', 'tableandshare' => 'commande_fournisseur', 'feature2' => 'commande', 'keyfield' => 'fk_soc', 'name' => 'SupplierOrder'),
+			'invoice_supplier' => array('module' => 'supplier_invoice', 'table' => 'facture_fourn', 'search' => array('ref', 'ref_supplier'), 'entity' => 'supplier_invoice', 'rights' => array(array('fournisseur', 'facture', 'lire'), array('supplier_invoice', 'lire')), 'features' => 'fournisseur', 'tableandshare' => 'facture_fourn', 'feature2' => 'facture', 'keyfield' => 'fk_soc', 'name' => 'SupplierInvoice'),
+			'shipping' => array('module' => 'expedition', 'table' => 'expedition', 'search' => array('ref', 'ref_customer'), 'entity' => 'expedition', 'rights' => array(array('expedition', 'lire')), 'features' => 'expedition', 'tableandshare' => '', 'feature2' => '', 'keyfield' => 'fk_soc', 'name' => 'Shipment'),
+			'fichinter' => array('module' => 'ficheinter', 'table' => 'fichinter', 'search' => array('ref', 'ref_client'), 'entity' => 'intervention', 'rights' => array(array('ficheinter', 'lire')), 'features' => 'ficheinter', 'tableandshare' => 'fichinter', 'feature2' => '', 'keyfield' => 'fk_soc', 'name' => 'Intervention'),
+			'contrat' => array('module' => 'contract', 'table' => 'contrat', 'search' => array('ref', 'ref_customer'), 'entity' => 'contract', 'rights' => array(array('contrat', 'lire')), 'features' => 'contrat', 'tableandshare' => '', 'feature2' => '', 'keyfield' => 'fk_soc', 'name' => 'Contract'),
+			'ticket' => array('module' => 'ticket', 'table' => 'ticket', 'search' => array('ref', 'subject'), 'entity' => 'ticket', 'rights' => array(array('ticket', 'read')), 'features' => 'ticket', 'tableandshare' => '', 'feature2' => '', 'keyfield' => 'fk_soc', 'name' => 'Ticket'),
+			'product' => array('module' => 'product', 'table' => 'product', 'search' => array('ref', 'label'), 'entity' => 'product', 'rights' => array(array('produit', 'lire'), array('service', 'lire')), 'features' => 'produit', 'tableandshare' => 'product&product', 'feature2' => '', 'keyfield' => '', 'name' => 'Product'),
+			'mo' => array('module' => 'mrp', 'table' => 'mrp_mo', 'search' => array('ref', 'label'), 'entity' => 'mo', 'rights' => array(array('mrp', 'read')), 'features' => 'mrp', 'tableandshare' => 'mrp_mo', 'feature2' => '', 'keyfield' => 'fk_soc', 'name' => 'ManufacturingOrder'),
+		);
+	}
+
+	/**
+	 * Whether $user may open a record: core's read permission and per-record check.
+	 * Records of other kinds (custom modules) need their module's read permission.
+	 *
+	 * @param User   $user User
+	 * @param object $obj  Record, with ->element and ->id
+	 * @return bool
+	 */
+	public function canSeeRecord($user, $obj)
+	{
+		if (empty($obj->id) || empty($obj->element)) {
+			return false;
+		}
+		require_once DOL_DOCUMENT_ROOT.'/core/lib/security.lib.php';
+		$element = (string) $obj->element;
+		$types = self::linkTypes();
+		if ($element === 'project_task') {
+			// A task is visible with its project
+			$allowed = $this->projectsAllowed($user);
+			return !empty($obj->fk_project) && isset($allowed[(int) $obj->fk_project]);
+		}
+		if ($element === 'project') {
+			$allowed = $this->projectsAllowed($user);
+			if (!isset($allowed[(int) $obj->id])) {
+				return false;
+			}
+		}
+		if (isset($types[$element])) {
+			$t = $types[$element];
+			$canread = false;
+			foreach ($t['rights'] as $right) {
+				if (call_user_func_array(array($user, 'hasRight'), $right)) {
+					$canread = true;
+					break;
+				}
+			}
+			// Entity, and third parties the user is not a sales representative of.
+			// Not restrictedArea(): before Dolibarr 21 it asks for write access during a save.
+			return $canread && checkUserAccessToObject($user, array($t['features']), (int) $obj->id, $t['tableandshare'], $t['feature2'], $t['keyfield'], 'rowid') > 0;
+		}
+		$prop = getElementProperties(self::elementOf($obj));
+		$module = (string) $prop['module'];
+		if ($module === '') {
+			return false;
+		}
+		return $user->hasRight($module, 'read') || $user->hasRight($module, (string) $prop['element'], 'read');
+	}
+
+	/**
+	 * Records $user can see whose ref or name matches $search, newest first, a few of
+	 * each kind. A pasted link to a record gives that record alone.
+	 *
+	 * @param User   $user   User
+	 * @param string $search Words, or a Dolibarr link
+	 * @param int    $limit  Most to return
+	 * @return array<int,array{element:string,id:int,label:string,type:string}>
+	 */
+	public function searchRecords($user, $search, $limit = 15)
+	{
+		global $langs;
+
+		$search = trim((string) $search);
+		if ($search === '') {
+			return array();
+		}
+		$langs->loadLangs(array('main', 'companies', 'projects', 'propal', 'orders', 'bills', 'products', 'sendings', 'interventions', 'contracts', 'ticket', 'mrp'));
+		$types = self::linkTypes();
+		$out = array();
+
+		// A pasted link: that record, if the user may see it
+		if (preg_match('#^(https?://|/)|\.php\b#i', $search)) {
+			$obj = $this->resolveLinks(array($search));
+			if ($obj && $this->canSeeRecord($user, $obj)) {
+				$out[] = $this->recordChoice($obj, isset($types[$obj->element]) ? $langs->transnoentitiesnoconv($types[$obj->element]['name']) : (string) $obj->element);
+			}
+			return $out;
+		}
+
+		foreach ($types as $element => $t) {
+			if (count($out) >= $limit) {
+				break;
+			}
+			$module = $t['module'];
+			if ($module === 'product' ? !(isModEnabled('product') || isModEnabled('service')) : !isModEnabled($module)) {
+				continue;
+			}
+			$sql = "SELECT t.rowid";
+			$sql .= " FROM ".MAIN_DB_PREFIX.$t['table']." as t";
+			$sql .= " WHERE t.entity IN (".getEntity($t['entity']).")";
+			$sql .= natural_search(array_map(function ($f) {
+				return 't.'.$f;
+			}, $t['search']), $search);
+			$sql .= " ORDER BY t.rowid DESC";
+			$sql .= $this->db->plimit(5);
+			$resql = $this->db->query($sql);
+			if (!$resql) {
+				continue;
+			}
+			$name = $langs->transnoentitiesnoconv($t['name']);
+			while (($row = $this->db->fetch_object($resql)) && count($out) < $limit) {
+				$obj = $this->fetchRecord($element, (int) $row->rowid);
+				if ($obj && $this->canSeeRecord($user, $obj)) {
+					$out[] = $this->recordChoice($obj, $name);
+				}
+			}
+			$this->db->free($resql);
+		}
+		return $out;
+	}
+
+	/**
+	 * A record as the "links to" field shows it.
+	 *
+	 * @param object $obj  Record
+	 * @param string $type Name of its kind (Invoice, Project, ...)
+	 * @return array{element:string,id:int,label:string,type:string}
+	 */
+	private function recordChoice($obj, $type)
+	{
+		return array('element' => self::elementOf($obj), 'id' => (int) $obj->id, 'label' => self::linkLabel($obj), 'type' => $type);
+	}
+
+	/**
+	 * Name of a linked record: recordLabel(), or a contact's full name (a contact's ref is its id).
+	 *
+	 * @param object $obj Record
+	 * @return string
+	 */
+	public static function linkLabel($obj)
+	{
+		global $langs;
+
+		if (isset($obj->element) && $obj->element === 'contact' && method_exists($obj, 'getFullName')) {
+			return (string) $obj->getFullName($langs);
+		}
+		return self::recordLabel($obj);
+	}
+
+	/**
+	 * The record a to-do is linked to (its event's linked object), or null.
+	 *
+	 * @param ActionComm $ac Event
+	 * @return object|null
+	 */
+	public function linkedRecord($ac)
+	{
+		$element = !empty($ac->elementtype) ? (string) $ac->elementtype : '';
+		$id = !empty($ac->elementid) ? (int) $ac->elementid : (!empty($ac->fk_element) ? (int) $ac->fk_element : 0);
+		return $this->fetchRecord($element, $id);
+	}
+
+	/**
+	 * Point a saved to-do at another record, or at none, in the database.
+	 * ActionComm::update() can set a linked object but never clear one.
+	 *
+	 * @param ActionComm $ac      Event
+	 * @param string     $element Element name, '' for no record
+	 * @param int        $id      Record id, 0 for no record
+	 * @return int                1 done, <0 error
+	 */
+	public function setLinkedRecord($ac, $element, $id)
+	{
+		// Stored the way ActionComm::create() stores them
+		$aliases = array('facture' => 'invoice', 'commande' => 'order', 'contrat' => 'contract');
+		if (isset($aliases[$element])) {
+			$element = $aliases[$element];
+		}
+		$linked = ($element !== '' && $id > 0);
+		$sql = "UPDATE ".MAIN_DB_PREFIX."actioncomm SET";
+		$sql .= " elementtype = ".($linked ? "'".$this->db->escape($element)."'" : "NULL");
+		$sql .= ", fk_element = ".($linked ? ((int) $id) : "NULL");
+		$sql .= " WHERE id = ".((int) $ac->id);
+		if (!$this->db->query($sql)) {
+			$this->error = $this->db->lasterror();
+			return -1;
+		}
+		$ac->elementtype = $linked ? $element : '';
+		$ac->elementid = $linked ? (int) $id : 0;
+		$ac->fk_element = $ac->elementid;
+		return 1;
 	}
 
 	/**
