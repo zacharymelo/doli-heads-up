@@ -1,6 +1,6 @@
 /* Heads-up: Alt+click (Option+click) anything, or click the flag in the top
- * bar and then click something, to open a small popup that sends a to-do or
- * a problem report without leaving the page.
+ * bar and then click something, to open a small popup that sends a to-do
+ * without leaving the page.
  *
  * Settings and the record on the page come from window.HEADSUP, printed in
  * the page footer by ActionsHeadsup::printCommonFooter().
@@ -155,6 +155,7 @@
 		}
 		placePopup = null;
 		document.documentElement.classList.remove('headsup-popup-open');
+		document.documentElement.classList.remove('headsup-popup-shown');
 		document.removeEventListener('keydown', onPopupKey, true);
 		if (historyPushed && how !== 'reopen') {
 			historyPushed = false;
@@ -172,6 +173,11 @@
 	});
 
 	function onPopupKey(e) {
+		var jq = window.jQuery;
+		/* Escape closes core's tag dropdown or dialog first, not the popup */
+		if (e.key === 'Escape' && jq && (jq('.select2-container--open').length || jq('.ui-dialog:visible').length)) {
+			return;
+		}
 		if (e.key === 'Escape') {
 			e.preventDefault();
 			closePopup();
@@ -298,9 +304,6 @@
 		var kind = 'todo';
 		var selected = {};
 		var screenshotDataUrl = null;
-
-		var tabTodo = el('button', { type: 'button', className: 'headsup-tab headsup-tab-on', text: 'To-do' });
-		var tabProblem = el('button', { type: 'button', className: 'headsup-tab', text: 'Report a problem' });
 
 		var filter = el('input', { type: 'text', className: 'headsup-filter', placeholder: 'Search people…' });
 		var userList = el('div', { className: 'headsup-users', text: 'Loading…' });
@@ -440,9 +443,11 @@
 			close
 		]);
 
+		/* Tags: filled with core's tag picker once loaded */
+		var tagsBox = c.tagsUrl ? el('div', { className: 'headsup-tags', text: 'Loading…' }) : null;
+
 		var form = el('form', { className: 'headsup-form' }, [
 			head,
-			el('div', { className: 'headsup-tabs' }, [tabTodo, tabProblem]),
 			whereLine,
 			linkedLine,
 			el('label', { className: 'headsup-label', text: 'Assign to' }),
@@ -457,11 +462,14 @@
 			screenshotBox,
 			projectBox ? el('label', { className: 'headsup-label', text: 'Project' }) : null,
 			projectBox,
+			tagsBox ? el('label', { className: 'headsup-label', text: 'Tags' }) : null,
+			tagsBox,
 			el('div', { className: 'headsup-actions' }, [cancel, send])
 		]);
 
 		popup = el('div', { className: 'headsup-popup', role: 'dialog', 'aria-label': 'Heads-up' }, [form]);
 		document.body.appendChild(popup);
+		document.documentElement.classList.add('headsup-popup-shown');
 		if (isSmallScreen()) {
 			document.documentElement.classList.add('headsup-popup-open');
 			if (!historyPushed && window.history && window.history.pushState) {
@@ -597,27 +605,6 @@
 			}
 		}
 
-		function setKind(k) {
-			kind = k;
-			tabTodo.classList.toggle('headsup-tab-on', k === 'todo');
-			tabProblem.classList.toggle('headsup-tab-on', k === 'problem');
-			if (k === 'problem') {
-				if (!Object.keys(selected).length && c.problemUser) {
-					selectUser(c.problemUser);
-				}
-				if (!title.value && !standalone) {
-					title.value = 'Problem: ' + (context.box || context.clicked || document.title);
-				}
-				desc.placeholder = "What's wrong? What did you expect to see?";
-			} else {
-				desc.placeholder = 'What should they look at? (optional)';
-			}
-			renderChosen();
-			renderUsers();
-		}
-
-		tabTodo.addEventListener('click', function () { setKind('todo'); });
-		tabProblem.addEventListener('click', function () { setKind('problem'); });
 		filter.addEventListener('input', renderUsers);
 		filter.addEventListener('keydown', function (e) {
 			if (e.key === 'Enter') {
@@ -655,8 +642,11 @@
 			if (confirmed) {
 				body.append('confirm', '1');
 			}
-			body.append('kind', kind);
 			ids.forEach(function (id) { body.append('users[]', id); });
+			var tagSelect = tagsBox ? tagsBox.querySelector('select') : null;
+			if (tagSelect) {
+				Array.prototype.forEach.call(tagSelect.selectedOptions, function (o) { body.append('categories[]', o.value); });
+			}
 			body.append('title', title.value.trim());
 			body.append('description', desc.value);
 			body.append('page', context.page);
@@ -688,7 +678,7 @@
 				.then(function (data) {
 					if (data && data.ok) {
 						closePopup();
-						toast(kind === 'problem' ? 'Problem reported' : 'Sent');
+						toast('Sent');
 						if (typeof data.count === 'number') {
 							setCount(data.count);
 						}
@@ -732,9 +722,6 @@
 					}
 					clickedRecord = r;
 					linkedLine.textContent = 'Links to: ' + r.label;
-					if (kind === 'problem' && title.value.indexOf('Problem: ') === 0 && !context.box) {
-						title.value = 'Problem: ' + r.label;
-					}
 					place();
 				})
 				.catch(function () {});
@@ -823,6 +810,38 @@
 		}).catch(function () {
 			userList.textContent = 'Could not load users';
 		});
+
+		if (tagsBox) {
+			/* Core's own tag picker (Form::selectCategories): its select2 box, and its + that opens Tags in a dialog */
+			fetch(c.tagsUrl, { credentials: 'same-origin' })
+				.then(function (r) { return r.json(); })
+				.then(function (data) {
+					var jq = window.jQuery;
+					if (!popup) {
+						return;
+					}
+					if (!data || !data.ok || !jq) {
+						tagsBox.textContent = 'Could not load tags';
+						return;
+					}
+					/* The dialog of an earlier popup is left in <body> with the same id */
+					jq('[id="idfordialogheadsup_categories"]').each(function () {
+						var d = jq(this);
+						if (d.dialog && d.dialog('instance')) {
+							d.dialog('destroy');
+						}
+						d.remove();
+					});
+					/* jQuery's html() also runs core's script that turns the select into select2 and wires the + */
+					jq(tagsBox).html(data.html);
+					place();
+				})
+				.catch(function () {
+					if (popup) {
+						tagsBox.textContent = 'Could not load tags';
+					}
+				});
+		}
 	}
 
 	/* ---------- Pick mode ---------- */
@@ -972,7 +991,8 @@
 		}
 		var altOnly = e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey;
 		if (!picking && !altOnly) {
-			if (popup && !target.closest('.headsup-popup')) {
+			/* Core's tag dropdown and dialog live in <body>, but belong to the popup */
+			if (popup && !target.closest('.headsup-popup, .select2-container, .ui-dialog, .ui-widget-overlay')) {
 				closePopup();
 			}
 			return;

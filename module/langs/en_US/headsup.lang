@@ -1,7 +1,7 @@
 # Module
 Module520900Name = Heads-up
-Module520900Desc = Alt+click anything to flag it for someone or report a problem; get a to-do when a record is assigned to you
-Permission52090001 = Send flags and problem reports
+Module520900Desc = Alt+click anything to flag it for someone; get a to-do when a record is assigned to you
+Permission52090001 = Send flags and to-dos
 Permission52090002 = See everyone's flags and problem reports
 
 # Menus
@@ -109,6 +109,9 @@ HeadsupDeleteCommentConfirm = Delete this comment? It cannot be brought back.
 HeadsupCommentDeleted = Comment deleted
 HeadsupMentionedYou = %s mentioned you
 HeadsupMentionHint = Type @ to mention someone. It stays in their queue until they reply.
+
+# Tags (categories)
+HeadsupTags = Tags
 
 # Screenshot feature
 HeadsupScreenshot = Screenshot

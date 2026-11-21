@@ -78,6 +78,7 @@ $langs->load('headsup@headsup');
 
 $kind = GETPOST('kind', 'aZ09');
 $code = ($kind === 'problem') ? Headsup::CODE_PROBLEM : Headsup::CODE_FLAG;
+$catids = GETPOST('categories', 'array:int');
 $userids = GETPOST('users', 'array:int');
 $title = trim(GETPOST('title', 'alphanohtml'));
 $description = trim(GETPOST('description', 'nohtml'));
@@ -194,6 +195,18 @@ if ($id <= 0) {
 
 if ($screenshotData !== '') {
 	$hu->addScreenshotToTodo($user, $id, $screenshotData);
+}
+
+if (!empty($catids) && isModEnabled('category')) {
+	$catids = array_values(array_filter($catids, function ($cid) {
+		return $cid > 0;
+	}));
+	if (!empty($catids)) {
+		$ac = new ActionComm($db);
+		if ($ac->fetch($id) > 0) {
+			$ac->setCategories($catids);
+		}
+	}
 }
 
 headsup_reply(200, array('ok' => 1, 'id' => $id, 'count' => $hu->countWaitingFor($user)));

@@ -275,6 +275,18 @@ html.headsup-picking * {
 	margin-top: 10px;
 }
 
+/* Tags: core's picker sits in the popup, so its dropdown and its + dialog (both in <body>) go above it */
+html.headsup-popup-shown .select2-container--open {
+	z-index: 100004;
+}
+/* The theme pins dialogs at 1005 with !important, on a six-class selector */
+html.headsup-popup-shown .ui-widget-overlay {
+	z-index: 100004 !important;
+}
+html.headsup-popup-shown .ui-dialog.ui-corner-all.ui-widget.ui-widget-content.ui-front[aria-describedby="idfordialogheadsup_categories"] {
+	z-index: 100005 !important;
+}
+
 /* Screenshot section in the popup */
 .headsup-screenshot {
 	margin-top: 4px;
