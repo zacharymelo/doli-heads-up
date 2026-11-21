@@ -69,6 +69,18 @@ class InterfaceHeadsupTrigger extends DolibarrTriggers
 			return 0;
 		}
 
+		// The Modify form changed the to-do's linked record (see ActionsHeadsup::prepareRelink())
+		if ($action === 'ACTION_MODIFY' && !empty($object->id) && class_exists('Headsup', false) && isset(Headsup::$pendingLinks[(int) $object->id])) {
+			$link = Headsup::$pendingLinks[(int) $object->id];
+			unset(Headsup::$pendingLinks[(int) $object->id]);
+			$hu = new Headsup($this->db);
+			if ($hu->setLinkedRecord($object, $link['element'], $link['id']) < 0) {
+				$this->error = $hu->error;
+				return -1;
+			}
+			return 0;
+		}
+
 		if (!isModEnabled('headsup') || !getDolGlobalInt('HEADSUP_NOTIFY_ASSIGNMENTS', 1)) {
 			return 0;
 		}

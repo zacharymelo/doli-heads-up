@@ -103,11 +103,12 @@ class ActionsHeadsup
 	/**
 	 * Event card: the one-click Acknowledge / Mark done / Back to to-do links.
 	 * Runs before core's own actions (and its access check), so it checks the
-	 * token and who may change it itself.
+	 * token and who may change it itself. On the Modify form's save, it also
+	 * prepares a change of linked record (see prepareRelink()).
 	 *
 	 * @param array<string,mixed> $parameters  Hook parameters
 	 * @param CommonObject        $object      The event, on the event card
-	 * @param string              $action      headsup_status
+	 * @param string              $action      headsup_status, or update
 	 * @param HookManager         $hookmanager Hook manager
 	 * @return int                             0
 	 */
@@ -115,6 +116,9 @@ class ActionsHeadsup
 	{
 		global $user, $langs;
 
+		if ($action === 'update' && $object instanceof ActionComm && GETPOSTINT('headsup_relink') && !GETPOST('cancel', 'alpha')) {
+			return $this->prepareRelink($object);
+		}
 		if ($action !== 'headsup_status' || !($object instanceof ActionComm) || !$this->isHeadsupTodo($object)) {
 			return 0;
 		}
@@ -136,6 +140,159 @@ class ActionsHeadsup
 		}
 		header('Location: '.$cardurl);
 		exit;
+	}
+
+	/**
+	 * Modify form saved with another record in Heads-up's "Linked object" field: check
+	 * the user may see that record, then let core's update carry it. The record's third
+	 * party and project (none, when it has none) and, for a contact, the contact go into
+	 * the form's own fields, unless the user changed those fields in the same form; the trigger on ACTION_MODIFY stores the linked
+	 * record itself, since ActionComm::update() can set one but never clear one.
+	 * A line in the description says who changed it and when.
+	 *
+	 * @param ActionComm $ac The event, as stored (core fetched it before the hooks)
+	 * @return int           0 (core's update goes on)
+	 */
+	private function prepareRelink($ac)
+	{
+		global $user, $langs;
+
+		if (!isModEnabled('headsup') || empty($ac->id)) {
+			return 0;
+		}
+		dol_include_once('/headsup/class/headsup.class.php');
+		if (!in_array($ac->code, Headsup::codes(), true)) {
+			return 0;
+		}
+		$langs->load('headsup@headsup');
+		$hu = new Headsup($this->db);
+
+		$element = GETPOST('headsup_link_element', 'aZ09arobase');
+		$id = GETPOSTINT('headsup_link_id');
+		$record = null;
+		if ($element !== '' && $id > 0) {
+			$record = $hu->fetchRecord($element, $id);
+			if (!$record || !$hu->canSeeRecord($user, $record)) {
+				// The rest of the form still saves; the link stays as it was
+				setEventMessages($langs->trans('HeadsupLinkNotAllowed'), null, 'errors');
+				return 0;
+			}
+		}
+
+		$old = $hu->linkedRecord($ac);
+		// A record that no longer exists is still a link, which removing must clear
+		$oldelement = $old ? Headsup::elementOf($old) : (!empty($ac->elementtype) ? (string) $ac->elementtype : '');
+		$oldid = $old ? (int) $old->id : (!empty($ac->elementtype) ? (int) $ac->elementid : 0);
+		$oldlabel = $old ? Headsup::linkLabel($old) : (!empty($ac->elementtype) ? $ac->elementtype.' #'.((int) $ac->elementid) : '');
+
+		// Third parties, projects and contacts are the event's own fields, not a linked object
+		$isfield = $record && in_array($record->element, array('societe', 'project', 'contact'), true);
+		$newelement = ($record && !$isfield) ? Headsup::elementOf($record) : '';
+		$newid = ($record && !$isfield) ? (int) $record->id : 0;
+		if ($newelement === $oldelement && $newid === $oldid && !$isfield) {
+			return 0;
+		}
+		if ($newelement !== $oldelement || $newid !== $oldid) {
+			Headsup::$pendingLinks[(int) $ac->id] = array('element' => $newelement, 'id' => $newid);
+		}
+
+		if ($record) {
+			$links = new ActionComm($this->db);
+			$hu->linkToObject($links, $record);
+			// As a new flag on that record would have them: the old ones came from the old record
+			if (max(0, GETPOSTINT('socid')) === max(0, (int) $ac->socid)) {
+				$_POST['socid'] = (string) max(0, (int) $links->socid);
+			}
+			if (isModEnabled('project') && max(0, GETPOSTINT('projectid')) === max(0, (int) $ac->fk_project)) {
+				$_POST['projectid'] = (string) max(0, (int) $links->fk_project);
+			}
+			if (!empty($links->contact_id)) {
+				$posted = array_map('intval', (array) GETPOST('socpeopleassigned', 'array'));
+				$stored = array_map('intval', array_keys((array) $ac->socpeopleassigned));
+				sort($posted);
+				sort($stored);
+				if ($posted === $stored) {
+					$_POST['socpeopleassigned'] = array((string) $links->contact_id);
+					$_POST['contactid'] = (string) $links->contact_id;
+				}
+			}
+		}
+
+		// Say who changed it and when, like the state changes
+		$who = $user->getFullName($langs);
+		$when = dol_print_date(dol_now(), 'dayhour', 'tzuserrel');
+		if ($record) {
+			$line = $langs->transnoentitiesnoconv('HeadsupLinkedBy', Headsup::linkLabel($record), $who, $when);
+		} else {
+			$line = $langs->transnoentitiesnoconv('HeadsupUnlinkedBy', $oldlabel, $who, $when);
+		}
+		if (GETPOSTISSET('note')) {
+			$note = (string) GETPOST('note', 'restricthtml');
+			if (trim($note) === '' || dol_textishtml($note)) {
+				$note .= (trim($note) !== '' ? '<br>' : '').dol_escape_htmltag($line);
+			} else {
+				$note .= "\n".$line;
+			}
+			$_POST['note'] = $note;
+		}
+		return 0;
+	}
+
+	/**
+	 * Event card, Modify form: on Heads-up to-dos, a "Linked object" field that can be
+	 * changed: search by ref or name, or paste a record's link, or remove the link.
+	 * headsup.js puts it in place of core's read-only row.
+	 *
+	 * @param array<string,mixed> $parameters  Hook parameters
+	 * @param ?object             $object      The event
+	 * @param string              $action      edit
+	 * @param HookManager         $hookmanager Hook manager
+	 * @return int                             0 (core's extra fields still shown)
+	 */
+	public function formObjectOptions($parameters, &$object, &$action, $hookmanager)
+	{
+		global $langs;
+
+		$this->resprints = '';
+		if ($action !== 'edit' || !isModEnabled('headsup') || !($object instanceof ActionComm) || empty($object->id)) {
+			return 0;
+		}
+		dol_include_once('/headsup/class/headsup.class.php');
+		if (!in_array($object->code, Headsup::codes(), true)) {
+			return 0;
+		}
+		$langs->loadLangs(array('headsup@headsup', 'agenda'));
+		$hu = new Headsup($this->db);
+		$current = null;
+		$rec = $hu->linkedRecord($object);
+		if ($rec) {
+			$current = array('element' => Headsup::elementOf($rec), 'id' => (int) $rec->id, 'label' => Headsup::linkLabel($rec));
+		} elseif (!empty($object->elementtype) && !empty($object->elementid)) {
+			// A record that no longer exists, or of a module that is off
+			$current = array('element' => (string) $object->elementtype, 'id' => (int) $object->elementid, 'label' => $object->elementtype.' #'.((int) $object->elementid));
+		}
+		$i18n = array(
+			'search' => $langs->transnoentitiesnoconv('HeadsupLinkSearch'),
+			'nothing' => $langs->transnoentitiesnoconv('HeadsupLinkNothing'),
+			'remove' => $langs->transnoentitiesnoconv('HeadsupLinkRemove'),
+			'noMatch' => $langs->transnoentitiesnoconv('HeadsupLinkNoMatch'),
+			'undo' => $langs->transnoentitiesnoconv('HeadsupLinkUndo'),
+		);
+		$json = JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT;
+
+		$out = '<tr class="headsup-relink-row"><td>'.dol_escape_htmltag($langs->trans('LinkedObject')).'</td><td colspan="3">';
+		$out .= '<div class="headsup-relink" data-url="'.dol_escape_htmltag(dol_buildpath('/headsup/ajax/records.php', 1)).'"';
+		$out .= ' data-current="'.dol_escape_htmltag(json_encode($current, $json)).'" data-i18n="'.dol_escape_htmltag(json_encode($i18n, $json)).'">';
+		$out .= '<input type="hidden" name="headsup_relink" value="0">';
+		$out .= '<input type="hidden" name="headsup_link_element" value="'.dol_escape_htmltag($current ? $current['element'] : '').'">';
+		$out .= '<input type="hidden" name="headsup_link_id" value="'.($current ? (int) $current['id'] : 0).'">';
+		// Without JavaScript the field shows what it links to and changes nothing
+		$out .= '<div class="headsup-chosen">'.($current ? '<span class="headsup-chip">'.dol_escape_htmltag($current['label']).'</span>' : '').'</div>';
+		$out .= '</div>';
+		$out .= '<div class="opacitymedium small headsup-relink-help">'.dol_escape_htmltag($langs->trans('HeadsupLinkHelp')).'</div>';
+		$out .= '</td></tr>';
+		$this->resprints = $out;
+		return 0;
 	}
 
 	/**

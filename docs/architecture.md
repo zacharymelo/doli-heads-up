@@ -39,6 +39,19 @@ The slider stops at `0, 10, 25, 50, 75, 100`. `Headsup::setStatus()` and `Headsu
 3. **`recordonly`** (from the `headsupBeforeFlag` hook): clears the third party, project and contact.
 4. **Project:** the sender's choice. If there is none, the `headsupTodoProject` hook decides. If no hook answers, the project found in steps 1–2 is kept.
 
+### Changing the link afterwards
+
+The event's **Modify** form gets a **Linked object** field on Heads-up to-dos (the `formObjectOptions` hook), which `headsup.js` puts in place of core's read-only row. It searches the records the user can open (`ajax/records.php`, `Headsup::searchRecords()`), takes a pasted link, or removes the link.
+
+On save, `ActionsHeadsup::prepareRelink()` (the `doActions` hook, before core's update):
+
+1. checks the record exists and that the user can open it (`Headsup::canSeeRecord()`: the module's read permission, then core's `checkUserAccessToObject()`, which covers entities and sales representatives)
+2. gives the form's own third party and project fields the record's (or none), as `linkToObject()` would for a new flag, and, for a contact, the contact. A field the user changed in the same form is left as they set it
+3. adds "Linked to *record* by *User*, *date*" (or "Link to … removed by …") to the description
+4. puts the new linked object in `Headsup::$pendingLinks`. The `ACTION_MODIFY` trigger writes it during core's update, through `Headsup::setLinkedRecord()`, because `ActionComm::update()` can set `elementtype`/`fk_element` but never clear them
+
+A third party, project or contact is not a linked object: picking one clears `elementtype`/`fk_element` and sets that field.
+
 ### From the browser to a record
 
 The browser sends the `href`s it sees. `Headsup::parseRecordUrl()` matches them against core card and tab URLs, plus custom modules' `*_card.php?id=` pages. `Headsup::fetchRecord()` then loads the record to check that it exists.
@@ -66,7 +79,7 @@ A mention is `@login` in a comment's text. Nothing else is stored: who is mentio
 
 ## Assignments
 
-`InterfaceHeadsupTrigger` listens to two kinds of trigger:
+`InterfaceHeadsupTrigger` listens to two kinds of trigger (besides `ACTION_DELETE` for comments and `ACTION_MODIFY` for [a changed link](#changing-the-link-afterwards)):
 
 - `*_ADD_CONTACT` (any element): the newest internal contact on the record is taken as the user just added, because `add_contact()` does not say which one it added. Their contact role becomes the title, e.g. "Project leader on PJ2611-0042".
 - `COMPANY_LINK_SALE_REPRESENTATIVE`: the user in `$object->context['commercial_modified']`.
@@ -79,7 +92,8 @@ Both are skipped when the user assigns themselves or when **To-do on assignment*
 |---|---|---|
 | `main` | `printTopRightMenu` | The flag icon, open count and its menu |
 | `main` | `printCommonFooter` | `window.HEADSUP`: URLs, token, rights, setup choices and the page's record |
-| `main` | `doActions` | The event card's `action=headsup_status` links (checks the token and who may change it) |
+| `main` | `doActions` | The event card's `action=headsup_status` links (checks the token and who may change it); on the Modify form's save, a changed linked object |
+| `main` | `formObjectOptions` | The **Linked object** field on a to-do's Modify form |
 | `main` | `addMoreActionsButtons` | The progress slider and **Status: …** button on the event card |
 | `main` | `completeTabsHead` | The **Conversation** tab on a to-do's event card, with the number of comments |
 
@@ -96,13 +110,14 @@ module/
 │   ├── users.php                        Active users for "Assign to"
 │   ├── resolve.php                      Links → record, for "Links to: …"
 │   ├── projects.php                     Project search for the Project field
+│   ├── records.php                      Record search for the Modify form's Linked object field
 │   └── debug.php                        Diagnostics (admins, Debug mode)
 ├── class/
 │   ├── headsup.class.php                Core logic: create, link, states, queries
 │   └── actions_headsup.class.php        Hooks on the 'main' context
 ├── core/
 │   ├── modules/modHeadsup.class.php     Module descriptor, event types, menus, rights
-│   └── triggers/interface_99_modHeadsup_HeadsupTrigger.class.php   Assignment to-dos; comments of a deleted to-do
+│   └── triggers/interface_99_modHeadsup_HeadsupTrigger.class.php   Assignment to-dos; comments of a deleted to-do; a changed link
 ├── comments.php                         Conversation tab of a to-do's event card
 ├── css/headsup.css                      Popup, queue, slider, conversation, cards on small screens
 ├── js/headsup.js                        Alt+click, pick mode, popup, notifications, queue controls

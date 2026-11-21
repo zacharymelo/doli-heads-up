@@ -133,3 +133,14 @@ HeadsupScreenshotCapture = Take screenshot
 HeadsupScreenshotRetake = Retake
 HeadsupScreenshotRemove = Remove
 HeadsupScreenshotHint = Captures the current tab. The browser will ask you to allow screen sharing.
+
+# Linked object on a to-do's Modify form
+HeadsupLinkSearch = Search a ref or name, or paste the record's link
+HeadsupLinkNothing = Not linked to a record
+HeadsupLinkRemove = Remove the link
+HeadsupLinkNoMatch = No match
+HeadsupLinkUndo = Keep the current link
+HeadsupLinkHelp = The to-do shows on this record's Events tab. A record picked here also brings its own third party and project (or none), and a contact itself, as a new flag on it would, unless you change those fields in this form.
+HeadsupLinkedBy = Linked to %s by %s, %s
+HeadsupUnlinkedBy = Link to %s removed by %s, %s
+HeadsupLinkNotAllowed = The to-do's linked record was not changed: that record does not exist, or you cannot open it.
