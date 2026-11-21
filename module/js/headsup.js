@@ -691,9 +691,17 @@
 		}
 	}
 
-	/* On a phone the menu is a fixed sheet across the screen (see headsup.css),
-	 * so its top is set here from the flag icon, wherever the theme puts it.
-	 * On a wider screen it hangs under the icon and needs nothing.
+	/* Keep the open menu on the screen.
+	 *
+	 * The menu hangs under the flag icon's right edge, which is right for a top
+	 * bar icon near the right of the window. But the theme decides where that
+	 * icon goes: on a narrow window Dolibarr moves the top bar icons into the
+	 * slide-out menu, part-way across the screen, and then the menu runs off the
+	 * left, taking the icon and the first words of every line with it. The
+	 * width at which that happens is the theme's business, not ours, so measure
+	 * where the menu actually landed and pull it back rather than guess a
+	 * breakpoint. On a phone the stylesheet makes it a fixed sheet across the
+	 * screen instead, and only its top is wanted here.
 	 *
 	 * @param {Element|null} menu The menu, open
 	 * @return {void}
@@ -703,13 +711,34 @@
 		if (!menu || !badge || menu.hidden) {
 			return;
 		}
-		if (window.getComputedStyle(menu).position !== 'fixed') {
-			menu.style.top = '';
+		/* Back to the stylesheet's own placement before measuring it */
+		menu.style.top = '';
+		menu.style.transform = '';
+		menu.style.maxWidth = '';
+		menu.style.whiteSpace = '';
+
+		var box = badge.getBoundingClientRect();
+		if (window.getComputedStyle(menu).position === 'fixed') {
+			var room = window.innerHeight - menu.offsetHeight - 8;
+			menu.style.top = Math.round(Math.max(8, Math.min(box.bottom + 8, room))) + 'px';
 			return;
 		}
-		var box = badge.getBoundingClientRect();
-		var room = window.innerHeight - menu.offsetHeight - 8;
-		menu.style.top = Math.round(Math.max(8, Math.min(box.bottom + 8, room))) + 'px';
+		/* Wider than the window: let the lines wrap instead of running off it */
+		var most = window.innerWidth - 16;
+		if (menu.offsetWidth > most) {
+			menu.style.maxWidth = most + 'px';
+			menu.style.whiteSpace = 'normal';
+		}
+		var now = menu.getBoundingClientRect();
+		var dx = 0;
+		if (now.left < 8) {
+			dx = 8 - now.left;
+		} else if (now.right > window.innerWidth - 8) {
+			dx = window.innerWidth - 8 - now.right;
+		}
+		if (dx) {
+			menu.style.transform = 'translateX('+Math.round(dx)+'px)';
+		}
 	}
 
 	/* Capture phase, so we act before links, buttons and Dolibarr's own handlers. */

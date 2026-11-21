@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.15
+
+- The flag icon's menu now keeps itself on the screen at any window width, not just on a phone. 0.3.14 fixed the clipping below 600px, but the width at which Dolibarr moves the top bar icons into the slide-out menu is the theme's business, not ours: on a window a little wider than that the menu still ran off the left edge. It is now measured where it actually lands and pulled back, so the breakpoint no longer matters. Lines wrap rather than overflow when the menu is wider than the window.
+
 ## 0.3.14
 
 - The flag icon's menu is readable on a phone again. On a small screen Dolibarr moves the top bar icons into the slide-out menu, part-way across the screen, and the menu hung under the icon's right edge ran off the left: the icon and the first words of **New to-do**, **Flag something on this page** and **My queue** were cut off and could not be tapped. It now spans the screen under the icon, with taller rows and labels that wrap.
