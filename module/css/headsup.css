@@ -275,32 +275,16 @@ html.headsup-picking * {
 	margin-top: 10px;
 }
 
-/* Tags (categories) section in the popup */
-.headsup-tags {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 4px;
-	margin-top: 4px;
+/* Tags: core's picker sits in the popup, so its dropdown and its + dialog (both in <body>) go above it */
+html.headsup-popup-shown .select2-container--open {
+	z-index: 100004;
 }
-.headsup-tag {
-	padding: 2px 10px;
-	border: 1px solid #bbb;
-	border-radius: 12px;
-	background: #bbb;
-	color: #fff;
-	font: inherit;
-	font-size: 0.9em;
-	cursor: pointer;
-	opacity: 0.6;
-	transition: opacity 0.1s;
+/* The theme pins dialogs at 1005 with !important, on a six-class selector */
+html.headsup-popup-shown .ui-widget-overlay {
+	z-index: 100004 !important;
 }
-.headsup-tag:hover,
-.headsup-tag:focus {
-	opacity: 0.85;
-}
-.headsup-tag-on {
-	opacity: 1;
-	box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.18);
+html.headsup-popup-shown .ui-dialog.ui-corner-all.ui-widget.ui-widget-content.ui-front[aria-describedby="idfordialogheadsup_categories"] {
+	z-index: 100005 !important;
 }
 
 /* Screenshot section in the popup */

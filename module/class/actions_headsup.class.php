@@ -277,7 +277,7 @@ class ActionsHeadsup
 			'projectsUrl' => dol_buildpath('/headsup/ajax/projects.php', 1),
 			'projectField' => Headsup::projectField() ? 1 : 0,
 			'screenshotEnabled' => getDolGlobalInt('HEADSUP_SCREENSHOT') > 0 ? 1 : 0,
-			'tagsUrl' => isModEnabled('category') ? dol_buildpath('/core/ajax/fetchCategories.php', 1).'?action=getCategories&type=actioncomm' : '',
+			'tagsUrl' => (isModEnabled('category') && $user->hasRight('categorie', 'lire')) ? dol_buildpath('/headsup/ajax/tags.php', 1) : '',
 			'token' => newToken(),
 			'me' => (int) $user->id,
 			'canSend' => $user->hasRight('headsup', 'send') ? 1 : 0,

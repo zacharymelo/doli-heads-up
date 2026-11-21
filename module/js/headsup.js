@@ -155,6 +155,7 @@
 		}
 		placePopup = null;
 		document.documentElement.classList.remove('headsup-popup-open');
+		document.documentElement.classList.remove('headsup-popup-shown');
 		document.removeEventListener('keydown', onPopupKey, true);
 		if (historyPushed && how !== 'reopen') {
 			historyPushed = false;
@@ -172,6 +173,11 @@
 	});
 
 	function onPopupKey(e) {
+		var jq = window.jQuery;
+		/* Escape closes core's tag dropdown or dialog first, not the popup */
+		if (e.key === 'Escape' && jq && (jq('.select2-container--open').length || jq('.ui-dialog:visible').length)) {
+			return;
+		}
 		if (e.key === 'Escape') {
 			e.preventDefault();
 			closePopup();
@@ -298,8 +304,6 @@
 		var kind = 'todo';
 		var selected = {};
 		var screenshotDataUrl = null;
-		var selectedTags = {};
-		var tagsLoaded = false;
 
 		var filter = el('input', { type: 'text', className: 'headsup-filter', placeholder: 'Search people…' });
 		var userList = el('div', { className: 'headsup-users', text: 'Loading…' });
@@ -439,10 +443,8 @@
 			close
 		]);
 
-		var tagsLabel = el('label', { className: 'headsup-label', text: 'Tags' });
-		var tagsBox = el('div', { className: 'headsup-tags', text: 'Loading…' });
-		tagsLabel.hidden = true;
-		tagsBox.hidden = true;
+		/* Tags: filled with core's tag picker once loaded */
+		var tagsBox = c.tagsUrl ? el('div', { className: 'headsup-tags', text: 'Loading…' }) : null;
 
 		var form = el('form', { className: 'headsup-form' }, [
 			head,
@@ -460,13 +462,14 @@
 			screenshotBox,
 			projectBox ? el('label', { className: 'headsup-label', text: 'Project' }) : null,
 			projectBox,
-			tagsLabel,
+			tagsBox ? el('label', { className: 'headsup-label', text: 'Tags' }) : null,
 			tagsBox,
 			el('div', { className: 'headsup-actions' }, [cancel, send])
 		]);
 
 		popup = el('div', { className: 'headsup-popup', role: 'dialog', 'aria-label': 'Heads-up' }, [form]);
 		document.body.appendChild(popup);
+		document.documentElement.classList.add('headsup-popup-shown');
 		if (isSmallScreen()) {
 			document.documentElement.classList.add('headsup-popup-open');
 			if (!historyPushed && window.history && window.history.pushState) {
@@ -640,7 +643,10 @@
 				body.append('confirm', '1');
 			}
 			ids.forEach(function (id) { body.append('users[]', id); });
-			Object.keys(selectedTags).forEach(function (id) { body.append('categories[]', id); });
+			var tagSelect = tagsBox ? tagsBox.querySelector('select') : null;
+			if (tagSelect) {
+				Array.prototype.forEach.call(tagSelect.selectedOptions, function (o) { body.append('categories[]', o.value); });
+			}
 			body.append('title', title.value.trim());
 			body.append('description', desc.value);
 			body.append('page', context.page);
@@ -805,38 +811,36 @@
 			userList.textContent = 'Could not load users';
 		});
 
-		/* Tags: load actioncomm categories, show as toggleable chips */
-		if (c.tagsUrl && !tagsLoaded) {
+		if (tagsBox) {
+			/* Core's own tag picker (Form::selectCategories): its select2 box, and its + that opens Tags in a dialog */
 			fetch(c.tagsUrl, { credentials: 'same-origin' })
 				.then(function (r) { return r.json(); })
 				.then(function (data) {
-					tagsLoaded = true;
-					var tagList = Array.isArray(data) ? data : (data.tags || []);
-					if (!popup || !tagList.length) {
+					var jq = window.jQuery;
+					if (!popup) {
 						return;
 					}
-					tagsBox.textContent = '';
-					tagList.forEach(function (tag) {
-						var color = tag.color ? '#' + tag.color : '#999';
-						var btn = el('button', { type: 'button', className: 'headsup-tag', text: tag.label });
-						btn.style.background = color;
-						btn.style.borderColor = color;
-						btn.addEventListener('click', function () {
-							if (selectedTags[tag.id]) {
-								delete selectedTags[tag.id];
-								btn.classList.remove('headsup-tag-on');
-							} else {
-								selectedTags[tag.id] = tag.label;
-								btn.classList.add('headsup-tag-on');
-							}
-						});
-						tagsBox.appendChild(btn);
+					if (!data || !data.ok || !jq) {
+						tagsBox.textContent = 'Could not load tags';
+						return;
+					}
+					/* The dialog of an earlier popup is left in <body> with the same id */
+					jq('[id="idfordialogheadsup_categories"]').each(function () {
+						var d = jq(this);
+						if (d.dialog && d.dialog('instance')) {
+							d.dialog('destroy');
+						}
+						d.remove();
 					});
-					tagsLabel.hidden = false;
-					tagsBox.hidden = false;
+					/* jQuery's html() also runs core's script that turns the select into select2 and wires the + */
+					jq(tagsBox).html(data.html);
 					place();
 				})
-				.catch(function () {});
+				.catch(function () {
+					if (popup) {
+						tagsBox.textContent = 'Could not load tags';
+					}
+				});
 		}
 	}
 
@@ -987,7 +991,8 @@
 		}
 		var altOnly = e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey;
 		if (!picking && !altOnly) {
-			if (popup && !target.closest('.headsup-popup')) {
+			/* Core's tag dropdown and dialog live in <body>, but belong to the popup */
+			if (popup && !target.closest('.headsup-popup, .select2-container, .ui-dialog, .ui-widget-overlay')) {
 				closePopup();
 			}
 			return;
