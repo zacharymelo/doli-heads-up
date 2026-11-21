@@ -113,6 +113,18 @@ HeadsupMentionHint = Type @ to mention someone. It stays in their queue until th
 # Tags (categories)
 HeadsupTags = Tags
 
+# Popup field layout (fold)
+HeadsupPopupLayout = Popup field order
+HeadsupPopupLayoutDesc = Which fields to show above the fold (always visible) and which to hide below it. Drag to reorder. Fields not available in your setup are ignored.
+HeadsupAboveFold = Above fold
+HeadsupBelowFold = Below fold
+HeadsupFoldSep = -- fold --
+HeadsupFieldTitle = Title
+HeadsupFieldDescription = Description
+HeadsupFieldScreenshot = Screenshot
+HeadsupFieldTags = Tags
+HeadsupFieldProject = Project
+
 # Screenshot feature
 HeadsupScreenshot = Screenshot
 HeadsupScreenshotDesc = When on, the flag popup has a "Take screenshot" button. The screenshot and click position are stored with the to-do. Requires the browser to allow screen sharing for this site.

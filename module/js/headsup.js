@@ -446,26 +446,66 @@
 		/* Tags: filled with core's tag picker once loaded */
 		var tagsBox = c.tagsUrl ? el('div', { className: 'headsup-tags', text: 'Loading…' }) : null;
 
-		var form = el('form', { className: 'headsup-form' }, [
-			head,
-			whereLine,
-			linkedLine,
+		/* Build the form in the order and fold configuration from setup */
+		var layout = c.popupLayout || [
+			{ key: 'title', fold: 'above' },
+			{ key: 'description', fold: 'above' },
+			{ key: 'screenshot', fold: 'above' },
+			{ key: 'tags', fold: 'above' },
+			{ key: 'project', fold: 'above' }
+		];
+		var fieldNodes = {
+			title: [el('label', { className: 'headsup-label', text: 'Title' }), title],
+			description: [el('label', { className: 'headsup-label', text: 'Description' }), desc]
+		};
+		if (screenshotBox) {
+			fieldNodes.screenshot = [el('label', { className: 'headsup-label', text: 'Screenshot' }), screenshotBox];
+		}
+		if (projectBox) {
+			fieldNodes.project = [el('label', { className: 'headsup-label', text: 'Project' }), projectBox];
+		}
+		if (tagsBox) {
+			fieldNodes.tags = [el('label', { className: 'headsup-label', text: 'Tags' }), tagsBox];
+		}
+		var aboveNodes = [];
+		var belowNodes = [];
+		layout.forEach(function (item) {
+			var nodes = fieldNodes[item.key];
+			if (!nodes) {
+				return;
+			}
+			if (item.fold === 'above') {
+				nodes.forEach(function (n) { aboveNodes.push(n); });
+			} else {
+				nodes.forEach(function (n) { belowNodes.push(n); });
+			}
+		});
+		var foldToggle = null;
+		var foldSection = null;
+		if (belowNodes.length) {
+			foldToggle = el('button', { type: 'button', className: 'headsup-fold-toggle', text: 'More ▾' });
+			foldSection = el('div', { className: 'headsup-fold-section' });
+			foldSection.hidden = true;
+			belowNodes.forEach(function (n) { foldSection.appendChild(n); });
+			foldToggle.addEventListener('click', function () {
+				var open = !foldSection.hidden;
+				foldSection.hidden = open;
+				foldToggle.textContent = open ? 'More ▾' : 'Less ▴';
+				place();
+			});
+		}
+		var formParts = [
+			head, whereLine, linkedLine,
 			el('label', { className: 'headsup-label', text: 'Assign to' }),
-			chosen,
-			filter,
-			userList,
-			el('label', { className: 'headsup-label', text: 'Title' }),
-			title,
-			el('label', { className: 'headsup-label', text: 'Description' }),
-			desc,
-			screenshotBox ? el('label', { className: 'headsup-label', text: 'Screenshot' }) : null,
-			screenshotBox,
-			projectBox ? el('label', { className: 'headsup-label', text: 'Project' }) : null,
-			projectBox,
-			tagsBox ? el('label', { className: 'headsup-label', text: 'Tags' }) : null,
-			tagsBox,
-			el('div', { className: 'headsup-actions' }, [cancel, send])
-		]);
+			chosen, filter, userList
+		];
+		aboveNodes.forEach(function (n) { formParts.push(n); });
+		if (foldToggle) {
+			formParts.push(foldToggle);
+			formParts.push(foldSection);
+		}
+		formParts.push(el('div', { className: 'headsup-actions' }, [cancel, send]));
+		var form = el('form', { className: 'headsup-form' }, formParts);
 
 		popup = el('div', { className: 'headsup-popup', role: 'dialog', 'aria-label': 'Heads-up' }, [form]);
 		document.body.appendChild(popup);

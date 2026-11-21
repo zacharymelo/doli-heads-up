@@ -351,6 +351,33 @@ html.headsup-popup-shown .ui-dialog.ui-corner-all.ui-widget.ui-widget-content.ui
 	color: #800000;
 }
 
+/* Fold toggle in the popup */
+.headsup-fold-toggle {
+	display: block;
+	width: 100%;
+	margin-top: 8px;
+	padding: 5px;
+	border: 1px dashed #ccc;
+	border-radius: 4px;
+	background: none;
+	color: #888;
+	font: inherit;
+	font-size: 0.85em;
+	text-align: center;
+	cursor: pointer;
+}
+.headsup-fold-toggle:hover,
+.headsup-fold-toggle:focus {
+	border-color: #2c6fb7;
+	color: #2c6fb7;
+}
+@media only screen and (max-width: 600px) {
+	.headsup-fold-toggle {
+		padding: 10px;
+		font-size: 15px;
+	}
+}
+
 /* Toast */
 .headsup-toast {
 	position: fixed;
@@ -780,4 +807,73 @@ html.headsup-popup-shown .ui-dialog.ui-corner-all.ui-widget.ui-widget-content.ui
 		color: #eee;
 		border-color: #555;
 	}
+}
+
+/* Setup page: popup field layout drag-and-drop editor */
+.headsup-layout-list {
+	list-style: none;
+	margin: 0 0 10px;
+	padding: 0;
+	max-width: 420px;
+}
+.headsup-layout-item {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 7px 10px;
+	margin-bottom: 2px;
+	border: 1px solid #ddd;
+	border-radius: 4px;
+	background: #fafafa;
+	cursor: grab;
+}
+.headsup-layout-item.headsup-layout-dragging {
+	opacity: 0.4;
+}
+.headsup-layout-handle {
+	color: #aaa;
+	font-size: 1.1em;
+	cursor: grab;
+	user-select: none;
+	flex-shrink: 0;
+}
+.headsup-layout-name {
+	flex: 1;
+}
+.headsup-layout-badge {
+	font-size: 0.8em;
+	padding: 2px 7px;
+	border-radius: 10px;
+	white-space: nowrap;
+	flex-shrink: 0;
+}
+.headsup-layout-above {
+	background: #e3f0ff;
+	color: #2c6fb7;
+}
+.headsup-layout-below {
+	background: #f0f0f0;
+	color: #666;
+}
+.headsup-layout-sep {
+	display: flex;
+	align-items: center;
+	padding: 5px 10px;
+	margin-bottom: 2px;
+	border: 2px dashed #bbb;
+	border-radius: 4px;
+	cursor: grab;
+	color: #888;
+	font-size: 0.85em;
+}
+.headsup-layout-sep-label {
+	flex: 1;
+	text-align: center;
+}
+.headsup-layout-placeholder {
+	height: 36px;
+	border: 2px dashed #2c6fb7;
+	border-radius: 4px;
+	background: #e3f0ff;
+	margin-bottom: 2px;
 }
