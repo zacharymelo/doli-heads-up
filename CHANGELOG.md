@@ -2,8 +2,8 @@
 
 ## 0.3.21
 
-- **Change what a to-do is linked to, after it is sent.** A to-do's **Modify** form now has a **Linked object** field in place of core's read-only one: search by ref or name (invoices, orders, proposals, projects, tasks, third parties, contacts, products and more), or paste the record's address, or remove the link. Only records you can open are offered, and the same check runs again on save. This also links a **New to-do** that was sent without a record.
-- Saving takes the new record's third party and project, as a new flag on it would, unless you changed those fields in the same form. The description gets a line saying who changed the link and when.
+- **Link a to-do to a record after it is sent**, whether it has none yet (a **New to-do**, or a flag sent from a page with no record) or should point somewhere else. A to-do's **Modify** form now has a **Linked object** field in place of core's read-only one: search by ref or name (invoices, orders, proposals, projects, tasks, third parties, contacts, products and more), or paste the record's address. The **×** removes the link. Only records you can open are offered, and the same check runs again on save.
+- Saving takes the record's third party and project, as a new flag on it would, unless you changed those fields in the same form. The description gets a line saying who linked it and when.
 
 ## 0.3.16
 

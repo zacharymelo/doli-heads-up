@@ -1305,8 +1305,8 @@
 	/* ---------- "Linked object" on a to-do's Modify form ---------- */
 
 	/* The field ActionsHeadsup::formObjectOptions() prints: the linked record as a
-	 * chip (× removes the link), and a search by ref or name, or a pasted link, to
-	 * pick another. It takes the place of core's own "Linked object" row, which
+	 * chip, or "Not linked to a record" (× removes the link), and a search by ref or
+	 * name, or a pasted link, to pick one: a first record or another. It takes the place of core's own "Linked object" row, which
 	 * is read-only (or only lists the project's tasks). Saving the form applies it. */
 	function initRelink() {
 		var box = document.querySelector('.headsup-relink');

@@ -104,7 +104,7 @@ class ActionsHeadsup
 	 * Event card: the one-click Acknowledge / Mark done / Back to to-do links.
 	 * Runs before core's own actions (and its access check), so it checks the
 	 * token and who may change it itself. On the Modify form's save, it also
-	 * prepares a change of linked record (see prepareRelink()).
+	 * prepares a change of linked record (see prepareLink()).
 	 *
 	 * @param array<string,mixed> $parameters  Hook parameters
 	 * @param CommonObject        $object      The event, on the event card
@@ -117,7 +117,7 @@ class ActionsHeadsup
 		global $user, $langs;
 
 		if ($action === 'update' && $object instanceof ActionComm && GETPOSTINT('headsup_relink') && !GETPOST('cancel', 'alpha')) {
-			return $this->prepareRelink($object);
+			return $this->prepareLink($object);
 		}
 		if ($action !== 'headsup_status' || !($object instanceof ActionComm) || !$this->isHeadsupTodo($object)) {
 			return 0;
@@ -143,7 +143,7 @@ class ActionsHeadsup
 	}
 
 	/**
-	 * Modify form saved with another record in Heads-up's "Linked object" field: check
+	 * Modify form saved with a record (a first one, or another) in Heads-up's "Linked object" field: check
 	 * the user may see that record, then let core's update carry it. The record's third
 	 * party and project (none, when it has none) and, for a contact, the contact go into
 	 * the form's own fields, unless the user changed those fields in the same form; the trigger on ACTION_MODIFY stores the linked
@@ -153,7 +153,7 @@ class ActionsHeadsup
 	 * @param ActionComm $ac The event, as stored (core fetched it before the hooks)
 	 * @return int           0 (core's update goes on)
 	 */
-	private function prepareRelink($ac)
+	private function prepareLink($ac)
 	{
 		global $user, $langs;
 
@@ -239,8 +239,9 @@ class ActionsHeadsup
 	}
 
 	/**
-	 * Event card, Modify form: on Heads-up to-dos, a "Linked object" field that can be
-	 * changed: search by ref or name, or paste a record's link, or remove the link.
+	 * Event card, Modify form: on Heads-up to-dos, a "Linked object" field to link the to-do
+	 * to a record after it is sent (it may have none yet) or change it: search by ref or name,
+	 * or paste a record's link, or remove the link.
 	 * headsup.js puts it in place of core's read-only row.
 	 *
 	 * @param array<string,mixed> $parameters  Hook parameters

@@ -69,7 +69,7 @@ class InterfaceHeadsupTrigger extends DolibarrTriggers
 			return 0;
 		}
 
-		// The Modify form changed the to-do's linked record (see ActionsHeadsup::prepareRelink())
+		// The Modify form changed the to-do's linked record (see ActionsHeadsup::prepareLink())
 		if ($action === 'ACTION_MODIFY' && !empty($object->id) && class_exists('Headsup', false) && isset(Headsup::$pendingLinks[(int) $object->id])) {
 			$link = Headsup::$pendingLinks[(int) $object->id];
 			unset(Headsup::$pendingLinks[(int) $object->id]);
